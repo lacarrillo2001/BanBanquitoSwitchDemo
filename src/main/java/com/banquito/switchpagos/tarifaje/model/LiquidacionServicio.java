@@ -25,41 +25,41 @@ public class LiquidacionServicio {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID_LIQUIDACION")
+    @Column(name = "id_liquidacion")
     private Long idLiquidacion;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ID_LOTE")
+    @JoinColumn(name = "id_lote")
     private LotePago lotePago;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ID_TARIFA_APLICADA")
+    @JoinColumn(name = "id_tarifa_aplicada")
     private TarifaServicio tarifaAplicada;
-    @Column(name = "TRANSACCIONES_EXITOSAS")
+    @Column(name = "transacciones_exitosas")
     private Integer transaccionesExitosas;
-    @Column(name = "TRANSACCIONES_FALLIDAS")
+    @Column(name = "transacciones_fallidas")
     private Integer transaccionesFallidas;
-    @Column(name = "TARIFA_UNITARIA_APLICADA")
+    @Column(name = "tarifa_unitaria_aplicada")
     private BigDecimal tarifaUnitariaAplicada;
-    @Column(name = "IVA_PORCENTAJE_APLICADO")
+    @Column(name = "iva_porcentaje_aplicado")
     private BigDecimal ivaPorcentajeAplicado;
-    @Column(name = "SUBTOTAL_COMISION")
+    @Column(name = "subtotal_comision")
     private BigDecimal subtotalComision;
-    @Column(name = "MONTO_IVA")
+    @Column(name = "monto_iva")
     private BigDecimal montoIva;
-    @Column(name = "TOTAL_DEBITADO")
+    @Column(name = "total_debitado")
     private BigDecimal totalDebitado;
     @Enumerated(EnumType.STRING)
-    @Column(name = "ESTADO_DEBITO")
+    @Column(name = "estado_debito")
     private EstadoDebitoLiquidacion estadoDebito;
-    @Column(name = "PERMITE_SOBREGIRO")
+    @Column(name = "permite_sobregiro")
     private Boolean permiteSobregiro;
-    @Column(name = "FECHA_LIQUIDACION")
+    @Column(name = "fecha_liquidacion")
     private OffsetDateTime fechaLiquidacion;
-    @Column(name = "FECHA_CREACION")
+    @Column(name = "fecha_creacion")
     private OffsetDateTime fechaCreacion;
-    @Column(name = "FECHA_ACTUALIZACION")
+    @Column(name = "fecha_actualizacion")
     private OffsetDateTime fechaActualizacion;
     @Version
-    @Column(name = "VERSION")
+    @Column(name = "version")
     private Integer version;
 
     public LiquidacionServicio() {

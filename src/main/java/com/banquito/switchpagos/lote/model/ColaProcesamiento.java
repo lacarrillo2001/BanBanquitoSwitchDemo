@@ -24,38 +24,38 @@ public class ColaProcesamiento {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID_COLA")
+    @Column(name = "id_cola")
     private Long idCola;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ID_LOTE")
+    @JoinColumn(name = "id_lote")
     private LotePago lotePago;
-    @Column(name = "FECHA_HABIL_PROGRAMADA")
+    @Column(name = "fecha_habil_programada")
     private LocalDate fechaHabilProgramada;
-    @Column(name = "FECHA_ENCOLADO")
+    @Column(name = "fecha_encolado")
     private OffsetDateTime fechaEncolado;
-    @Column(name = "FECHA_PROGRAMADA_PROCESO")
+    @Column(name = "fecha_programada_proceso")
     private OffsetDateTime fechaProgramadaProceso;
     @Enumerated(EnumType.STRING)
-    @Column(name = "ESTADO_COLA")
+    @Column(name = "estado_cola")
     private EstadoColaProcesamiento estadoCola;
-    @Column(name = "PRIORIDAD")
+    @Column(name = "prioridad")
     private Integer prioridad;
-    @Column(name = "INTENTOS")
+    @Column(name = "intentos")
     private Integer intentos;
-    @Column(name = "MAX_INTENTOS")
+    @Column(name = "max_intentos")
     private Integer maxIntentos;
-    @Column(name = "TOMADO_POR")
+    @Column(name = "tomado_por")
     private String tomadoPor;
-    @Column(name = "TOMADO_EN")
+    @Column(name = "tomado_en")
     private OffsetDateTime tomadoEn;
-    @Column(name = "PROXIMO_REINTENTO_EN")
+    @Column(name = "proximo_reintento_en")
     private OffsetDateTime proximoReintentoEn;
-    @Column(name = "ULTIMO_ERROR")
+    @Column(name = "ultimo_error")
     private String ultimoError;
-    @Column(name = "FECHA_ACTUALIZACION")
+    @Column(name = "fecha_actualizacion")
     private OffsetDateTime fechaActualizacion;
     @Version
-    @Column(name = "VERSION")
+    @Column(name = "version")
     private Integer version;
 
     public ColaProcesamiento() {

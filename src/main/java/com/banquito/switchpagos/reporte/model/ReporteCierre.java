@@ -28,36 +28,36 @@ public class ReporteCierre {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID_REPORTE")
+    @Column(name = "id_reporte")
     private Long idReporte;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ID_LOTE")
+    @JoinColumn(name = "id_lote")
     private LotePago lotePago;
     @Enumerated(EnumType.STRING)
-    @Column(name = "TIPO_REPORTE")
+    @Column(name = "tipo_reporte")
     private TipoReporte tipoReporte;
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "CONTENIDO_JSON")
+    @Column(name = "contenido_json")
     private JsonNode contenidoJson;
-    @Column(name = "NOMBRE_ARCHIVO")
+    @Column(name = "nombre_archivo")
     private String nombreArchivo;
     @Enumerated(EnumType.STRING)
-    @Column(name = "FORMATO_ARCHIVO")
+    @Column(name = "formato_archivo")
     private FormatoReporte formatoArchivo;
-    @Column(name = "URL_ARCHIVO")
+    @Column(name = "url_archivo")
     private String urlArchivo;
-    @Column(name = "HASH_REPORTE")
+    @Column(name = "hash_reporte")
     private String hashReporte;
-    @Column(name = "FECHA_GENERACION")
+    @Column(name = "fecha_generacion")
     private OffsetDateTime fechaGeneracion;
-    @Column(name = "DESCARGADO_EMPRESA")
+    @Column(name = "descargado_empresa")
     private Boolean descargadoEmpresa;
-    @Column(name = "FECHA_DESCARGA")
+    @Column(name = "fecha_descarga")
     private OffsetDateTime fechaDescarga;
-    @Column(name = "FECHA_ACTUALIZACION")
+    @Column(name = "fecha_actualizacion")
     private OffsetDateTime fechaActualizacion;
     @Version
-    @Column(name = "VERSION")
+    @Column(name = "version")
     private Integer version;
 
     public ReporteCierre() {

@@ -26,32 +26,32 @@ public class TarifaServicio {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID_TARIFA")
+    @Column(name = "id_tarifa")
     private Integer idTarifa;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "TIPO_SERVICIO")
+    @JoinColumn(name = "tipo_servicio")
     private TipoServicio tipoServicio;
-    @Column(name = "RANGO_DESDE")
+    @Column(name = "rango_desde")
     private Integer rangoDesde;
-    @Column(name = "RANGO_HASTA")
+    @Column(name = "rango_hasta")
     private Integer rangoHasta;
-    @Column(name = "TARIFA_UNITARIA")
+    @Column(name = "tarifa_unitaria")
     private BigDecimal tarifaUnitaria;
-    @Column(name = "MONEDA")
+    @Column(name = "moneda")
     private String moneda;
-    @Column(name = "VIGENTE_DESDE")
+    @Column(name = "vigente_desde")
     private LocalDate vigenteDesde;
-    @Column(name = "VIGENTE_HASTA")
+    @Column(name = "vigente_hasta")
     private LocalDate vigenteHasta;
     @Enumerated(EnumType.STRING)
-    @Column(name = "ESTADO")
+    @Column(name = "estado")
     private EstadoTarifaServicio estado;
-    @Column(name = "FECHA_CREACION")
+    @Column(name = "fecha_creacion")
     private OffsetDateTime fechaCreacion;
-    @Column(name = "FECHA_ACTUALIZACION")
+    @Column(name = "fecha_actualizacion")
     private OffsetDateTime fechaActualizacion;
     @Version
-    @Column(name = "VERSION")
+    @Column(name = "version")
     private Integer version;
 
     public TarifaServicio() {

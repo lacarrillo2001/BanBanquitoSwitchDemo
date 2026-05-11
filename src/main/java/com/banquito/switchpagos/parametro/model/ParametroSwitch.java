@@ -17,30 +17,30 @@ import java.util.Objects;
 public class ParametroSwitch {
 
     @Id
-    @Column(name = "CODIGO")
+    @Column(name = "codigo")
     private String codigo;
 
-    @Column(name = "NOMBRE")
+    @Column(name = "nombre")
     private String nombre;
 
-    @Column(name = "VALOR_TEXTO")
+    @Column(name = "valor_texto")
     private String valorTexto;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "TIPO_DATO")
+    @Column(name = "tipo_dato")
     private TipoDatoParametro tipoDato;
 
-    @Column(name = "DESCRIPCION")
+    @Column(name = "descripcion")
     private String descripcion;
 
-    @Column(name = "FECHA_ACTUALIZACION")
+    @Column(name = "fecha_actualizacion")
     private OffsetDateTime fechaActualizacion;
 
-    @Column(name = "ACTUALIZADO_POR")
+    @Column(name = "actualizado_por")
     private String actualizadoPor;
 
     @Version
-    @Column(name = "VERSION")
+    @Column(name = "version")
     private Integer version;
 
     public ParametroSwitch() {

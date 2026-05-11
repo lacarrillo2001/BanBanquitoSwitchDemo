@@ -27,34 +27,34 @@ public class IntentoProcesamiento {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID_INTENTO")
+    @Column(name = "id_intento")
     private Long idIntento;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ID_COLA")
+    @JoinColumn(name = "id_cola")
     private ColaProcesamiento colaProcesamiento;
-    @Column(name = "NUMERO_INTENTO")
+    @Column(name = "numero_intento")
     private Integer numeroIntento;
-    @Column(name = "FECHA_INICIO")
+    @Column(name = "fecha_inicio")
     private OffsetDateTime fechaInicio;
-    @Column(name = "FECHA_FIN")
+    @Column(name = "fecha_fin")
     private OffsetDateTime fechaFin;
     @Enumerated(EnumType.STRING)
-    @Column(name = "ESTADO")
+    @Column(name = "estado")
     private EstadoIntentoProcesamiento estado;
-    @Column(name = "CODIGO_ERROR")
+    @Column(name = "codigo_error")
     private String codigoError;
-    @Column(name = "MENSAJE_ERROR")
+    @Column(name = "mensaje_error")
     private String mensajeError;
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "SOLICITUD_CORE")
+    @Column(name = "solicitud_core")
     private JsonNode solicitudCore;
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "RESPUESTA_CORE")
+    @Column(name = "respuesta_core")
     private JsonNode respuestaCore;
-    @Column(name = "FECHA_ACTUALIZACION")
+    @Column(name = "fecha_actualizacion")
     private OffsetDateTime fechaActualizacion;
     @Version
-    @Column(name = "VERSION")
+    @Column(name = "version")
     private Integer version;
 
     public IntentoProcesamiento() {
