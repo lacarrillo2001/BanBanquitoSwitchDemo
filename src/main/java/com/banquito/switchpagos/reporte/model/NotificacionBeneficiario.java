@@ -28,36 +28,36 @@ public class NotificacionBeneficiario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID_NOTIFICACION")
+    @Column(name = "id_notificacion")
     private Long idNotificacion;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ID_LINEA")
+    @JoinColumn(name = "id_linea")
     private LineaPago lineaPago;
-    @Column(name = "CORREO_DESTINO")
+    @Column(name = "correo_destino")
     private String correoDestino;
     @Enumerated(EnumType.STRING)
-    @Column(name = "TIPO_NOTIFICACION")
+    @Column(name = "tipo_notificacion")
     private TipoNotificacion tipoNotificacion;
-    @Column(name = "ASUNTO")
+    @Column(name = "asunto")
     private String asunto;
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "CONTENIDO")
+    @Column(name = "contenido")
     private JsonNode contenido;
     @Enumerated(EnumType.STRING)
-    @Column(name = "ESTADO_ENVIO")
+    @Column(name = "estado_envio")
     private EstadoEnvioNotificacion estadoEnvio;
-    @Column(name = "FECHA_ENVIO")
+    @Column(name = "fecha_envio")
     private OffsetDateTime fechaEnvio;
-    @Column(name = "ERROR_ENVIO")
+    @Column(name = "error_envio")
     private String errorEnvio;
-    @Column(name = "REINTENTOS")
+    @Column(name = "reintentos")
     private Integer reintentos;
-    @Column(name = "PROXIMO_REINTENTO_EN")
+    @Column(name = "proximo_reintento_en")
     private OffsetDateTime proximoReintentoEn;
-    @Column(name = "FECHA_ACTUALIZACION")
+    @Column(name = "fecha_actualizacion")
     private OffsetDateTime fechaActualizacion;
     @Version
-    @Column(name = "VERSION")
+    @Column(name = "version")
     private Integer version;
 
     public NotificacionBeneficiario() {

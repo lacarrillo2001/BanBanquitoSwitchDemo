@@ -28,74 +28,74 @@ public class LotePago {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID_LOTE")
+    @Column(name = "id_lote")
     private Long idLote;
-    @Column(name = "UUID_LOTE")
+    @Column(name = "uuid_lote")
     private UUID uuidLote;
-    @Column(name = "CLAVE_IDEMPOTENCIA")
+    @Column(name = "clave_idempotencia")
     private UUID claveIdempotencia;
-    @Column(name = "RUC_EMPRESA")
+    @Column(name = "ruc_empresa")
     private String rucEmpresa;
-    @Column(name = "ID_CREDENCIAL_WEB_CORE")
+    @Column(name = "id_credencial_web_core")
     private Integer idCredencialWebCore;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "TIPO_SERVICIO")
+    @JoinColumn(name = "tipo_servicio")
     private TipoServicio tipoServicio;
-    @Column(name = "CUENTA_MATRIZ_CARGO")
+    @Column(name = "cuenta_matriz_cargo")
     private String cuentaMatrizCargo;
-    @Column(name = "FECHA_HORA_GENERACION")
+    @Column(name = "fecha_hora_generacion")
     private OffsetDateTime fechaHoraGeneracion;
-    @Column(name = "TOTAL_REGISTROS_DECLARADO")
+    @Column(name = "total_registros_declarado")
     private Integer totalRegistrosDeclarado;
-    @Column(name = "MONTO_TOTAL_DECLARADO")
+    @Column(name = "monto_total_declarado")
     private BigDecimal montoTotalDeclarado;
-    @Column(name = "TOTAL_REGISTROS_PIE")
+    @Column(name = "total_registros_pie")
     private Integer totalRegistrosPie;
-    @Column(name = "MONTO_TOTAL_PIE")
+    @Column(name = "monto_total_pie")
     private BigDecimal montoTotalPie;
-    @Column(name = "TOTAL_REGISTROS_VALIDADOS")
+    @Column(name = "total_registros_validados")
     private Integer totalRegistrosValidados;
-    @Column(name = "TOTAL_REGISTROS_RECHAZADOS")
+    @Column(name = "total_registros_rechazados")
     private Integer totalRegistrosRechazados;
-    @Column(name = "MONTO_TOTAL_VALIDADO")
+    @Column(name = "monto_total_validado")
     private BigDecimal montoTotalValidado;
-    @Column(name = "NOMBRE_ARCHIVO")
+    @Column(name = "nombre_archivo")
     private String nombreArchivo;
-    @Column(name = "HASH_ARCHIVO")
+    @Column(name = "hash_archivo")
     private String hashArchivo;
-    @Column(name = "HASH_PIE_CONTROL")
+    @Column(name = "hash_pie_control")
     private String hashPieControl;
-    @Column(name = "TAMANO_BYTES")
+    @Column(name = "tamano_bytes")
     private Long tamanoBytes;
     @Enumerated(EnumType.STRING)
-    @Column(name = "FORMATO_ARCHIVO")
+    @Column(name = "formato_archivo")
     private FormatoArchivo formatoArchivo;
-    @Column(name = "RUTA_ALMACENAMIENTO")
+    @Column(name = "ruta_almacenamiento")
     private String rutaAlmacenamiento;
     @Enumerated(EnumType.STRING)
-    @Column(name = "CANAL_INGRESO")
+    @Column(name = "canal_ingreso")
     private CanalIngreso canalIngreso;
     @Enumerated(EnumType.STRING)
-    @Column(name = "ESTADO")
+    @Column(name = "estado")
     private EstadoLote estado;
-    @Column(name = "MOTIVO_RECHAZO_GLOBAL")
+    @Column(name = "motivo_rechazo_global")
     private String motivoRechazoGlobal;
-    @Column(name = "FECHA_RECEPCION")
+    @Column(name = "fecha_recepcion")
     private OffsetDateTime fechaRecepcion;
-    @Column(name = "FECHA_INICIO_VALIDACION")
+    @Column(name = "fecha_inicio_validacion")
     private OffsetDateTime fechaInicioValidacion;
-    @Column(name = "FECHA_FIN_VALIDACION")
+    @Column(name = "fecha_fin_validacion")
     private OffsetDateTime fechaFinValidacion;
-    @Column(name = "FECHA_INICIO_PROCESO")
+    @Column(name = "fecha_inicio_proceso")
     private OffsetDateTime fechaInicioProceso;
-    @Column(name = "FECHA_FIN_PROCESO")
+    @Column(name = "fecha_fin_proceso")
     private OffsetDateTime fechaFinProceso;
-    @Column(name = "FECHA_CIERRE")
+    @Column(name = "fecha_cierre")
     private OffsetDateTime fechaCierre;
-    @Column(name = "FECHA_ACTUALIZACION")
+    @Column(name = "fecha_actualizacion")
     private OffsetDateTime fechaActualizacion;
     @Version
-    @Column(name = "VERSION")
+    @Column(name = "version")
     private Integer version;
 
     public LotePago() {

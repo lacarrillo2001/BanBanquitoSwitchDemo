@@ -26,30 +26,30 @@ public class LimiteTransaccion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID_LIMITE")
+    @Column(name = "id_limite")
     private Integer idLimite;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "TIPO_SERVICIO")
+    @JoinColumn(name = "tipo_servicio")
     private TipoServicio tipoServicio;
-    @Column(name = "MONTO_MINIMO")
+    @Column(name = "monto_minimo")
     private BigDecimal montoMinimo;
-    @Column(name = "MONTO_MAXIMO")
+    @Column(name = "monto_maximo")
     private BigDecimal montoMaximo;
-    @Column(name = "MONEDA")
+    @Column(name = "moneda")
     private String moneda;
-    @Column(name = "VIGENTE_DESDE")
+    @Column(name = "vigente_desde")
     private LocalDate vigenteDesde;
-    @Column(name = "VIGENTE_HASTA")
+    @Column(name = "vigente_hasta")
     private LocalDate vigenteHasta;
     @Enumerated(EnumType.STRING)
-    @Column(name = "ESTADO")
+    @Column(name = "estado")
     private EstadoLimiteTransaccion estado;
-    @Column(name = "FECHA_CREACION")
+    @Column(name = "fecha_creacion")
     private OffsetDateTime fechaCreacion;
-    @Column(name = "FECHA_ACTUALIZACION")
+    @Column(name = "fecha_actualizacion")
     private OffsetDateTime fechaActualizacion;
     @Version
-    @Column(name = "VERSION")
+    @Column(name = "version")
     private Integer version;
 
     public LimiteTransaccion() {

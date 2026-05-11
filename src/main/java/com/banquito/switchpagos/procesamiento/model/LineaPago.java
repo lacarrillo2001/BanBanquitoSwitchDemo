@@ -26,52 +26,52 @@ public class LineaPago {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID_LINEA")
+    @Column(name = "id_linea")
     private Long idLinea;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ID_LOTE")
+    @JoinColumn(name = "id_lote")
     private LotePago lotePago;
-    @Column(name = "SECUENCIAL")
+    @Column(name = "secuencial")
     private Integer secuencial;
-    @Column(name = "IDENTIFICACION_BENEFICIARIO")
+    @Column(name = "identificacion_beneficiario")
     private String identificacionBeneficiario;
-    @Column(name = "NOMBRE_BENEFICIARIO")
+    @Column(name = "nombre_beneficiario")
     private String nombreBeneficiario;
-    @Column(name = "CUENTA_DESTINO")
+    @Column(name = "cuenta_destino")
     private String cuentaDestino;
-    @Column(name = "MONTO")
+    @Column(name = "monto")
     private BigDecimal monto;
-    @Column(name = "CONCEPTO_REFERENCIA")
+    @Column(name = "concepto_referencia")
     private String conceptoReferencia;
-    @Column(name = "CORREO_NOTIFICACION")
+    @Column(name = "correo_notificacion")
     private String correoNotificacion;
     @Enumerated(EnumType.STRING)
-    @Column(name = "ESTADO")
+    @Column(name = "estado")
     private EstadoLineaPago estado;
-    @Column(name = "CODIGO_ERROR")
+    @Column(name = "codigo_error")
     private String codigoError;
-    @Column(name = "MENSAJE_ERROR")
+    @Column(name = "mensaje_error")
     private String mensajeError;
-    @Column(name = "UUID_OPERACION_SWITCH")
+    @Column(name = "uuid_operacion_switch")
     private UUID uuidOperacionSwitch;
-    @Column(name = "UUID_DEBITO_CORE")
+    @Column(name = "uuid_debito_core")
     private UUID uuidDebitoCore;
-    @Column(name = "UUID_CREDITO_CORE")
+    @Column(name = "uuid_credito_core")
     private UUID uuidCreditoCore;
-    @Column(name = "UUID_GRUPO_CORE")
+    @Column(name = "uuid_grupo_core")
     private UUID uuidGrupoCore;
-    @Column(name = "FECHA_VALIDACION")
+    @Column(name = "fecha_validacion")
     private OffsetDateTime fechaValidacion;
-    @Column(name = "FECHA_ENVIO_CORE")
+    @Column(name = "fecha_envio_core")
     private OffsetDateTime fechaEnvioCore;
-    @Column(name = "FECHA_RESPUESTA_CORE")
+    @Column(name = "fecha_respuesta_core")
     private OffsetDateTime fechaRespuestaCore;
-    @Column(name = "FECHA_PROCESO")
+    @Column(name = "fecha_proceso")
     private OffsetDateTime fechaProceso;
-    @Column(name = "FECHA_ACTUALIZACION")
+    @Column(name = "fecha_actualizacion")
     private OffsetDateTime fechaActualizacion;
     @Version
-    @Column(name = "VERSION")
+    @Column(name = "version")
     private Integer version;
 
     public LineaPago() {

@@ -22,32 +22,32 @@ public class BitacoraAuditoriaSwitch {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID_AUDITORIA")
+    @Column(name = "id_auditoria")
     private Long idAuditoria;
     @Enumerated(EnumType.STRING)
-    @Column(name = "TIPO_ACTOR")
+    @Column(name = "tipo_actor")
     private TipoActorAuditoria tipoActor;
-    @Column(name = "ID_ACTOR")
+    @Column(name = "id_actor")
     private String idActor;
-    @Column(name = "RUC_EMPRESA")
+    @Column(name = "ruc_empresa")
     private String rucEmpresa;
-    @Column(name = "ACCION")
+    @Column(name = "accion")
     private String accion;
-    @Column(name = "ENTIDAD")
+    @Column(name = "entidad")
     private String entidad;
-    @Column(name = "ID_ENTIDAD")
+    @Column(name = "id_entidad")
     private String idEntidad;
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "DATOS_ANTES")
+    @Column(name = "datos_antes")
     private JsonNode datosAntes;
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "DATOS_DESPUES")
+    @Column(name = "datos_despues")
     private JsonNode datosDespues;
-    @Column(name = "DIRECCION_IP", columnDefinition = "inet")
+    @Column(name = "direccion_ip", columnDefinition = "inet")
     private String direccionIp;
-    @Column(name = "AGENTE_USUARIO")
+    @Column(name = "agente_usuario")
     private String agenteUsuario;
-    @Column(name = "FECHA_CREACION")
+    @Column(name = "fecha_creacion")
     private OffsetDateTime fechaCreacion;
 
     public BitacoraAuditoriaSwitch() {

@@ -17,27 +17,27 @@ import java.util.Objects;
 public class TipoServicio {
 
     @Id
-    @Column(name = "CODIGO")
+    @Column(name = "codigo")
     private String codigo;
 
-    @Column(name = "NOMBRE")
+    @Column(name = "nombre")
     private String nombre;
 
-    @Column(name = "DESCRIPCION")
+    @Column(name = "descripcion")
     private String descripcion;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "ESTADO")
+    @Column(name = "estado")
     private EstadoTipoServicio estado;
 
-    @Column(name = "FECHA_CREACION")
+    @Column(name = "fecha_creacion")
     private OffsetDateTime fechaCreacion;
 
-    @Column(name = "FECHA_ACTUALIZACION")
+    @Column(name = "fecha_actualizacion")
     private OffsetDateTime fechaActualizacion;
 
     @Version
-    @Column(name = "VERSION")
+    @Column(name = "version")
     private Integer version;
 
     public TipoServicio() {

@@ -22,22 +22,22 @@ public class HistorialEstadoLote {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID_HISTORIAL")
+    @Column(name = "id_historial")
     private Long idHistorial;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ID_LOTE")
+    @JoinColumn(name = "id_lote")
     private LotePago lotePago;
     @Enumerated(EnumType.STRING)
-    @Column(name = "ESTADO_ANTERIOR")
+    @Column(name = "estado_anterior")
     private EstadoLote estadoAnterior;
     @Enumerated(EnumType.STRING)
-    @Column(name = "ESTADO_NUEVO")
+    @Column(name = "estado_nuevo")
     private EstadoLote estadoNuevo;
-    @Column(name = "MOTIVO")
+    @Column(name = "motivo")
     private String motivo;
-    @Column(name = "CAMBIADO_POR")
+    @Column(name = "cambiado_por")
     private String cambiadoPor;
-    @Column(name = "FECHA_CAMBIO")
+    @Column(name = "fecha_cambio")
     private OffsetDateTime fechaCambio;
 
     public HistorialEstadoLote() {

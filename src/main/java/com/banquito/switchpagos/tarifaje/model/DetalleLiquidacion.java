@@ -24,23 +24,23 @@ public class DetalleLiquidacion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID_DETALLE")
+    @Column(name = "id_detalle")
     private Long idDetalle;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ID_LIQUIDACION")
+    @JoinColumn(name = "id_liquidacion")
     private LiquidacionServicio liquidacionServicio;
     @Enumerated(EnumType.STRING)
-    @Column(name = "CONCEPTO")
+    @Column(name = "concepto")
     private ConceptoDetalleLiquidacion concepto;
-    @Column(name = "MONTO")
+    @Column(name = "monto")
     private BigDecimal monto;
-    @Column(name = "UUID_TRANSACCION_CORE")
+    @Column(name = "uuid_transaccion_core")
     private UUID uuidTransaccionCore;
-    @Column(name = "CUENTA_ORIGEN_CORE")
+    @Column(name = "cuenta_origen_core")
     private String cuentaOrigenCore;
-    @Column(name = "CUENTA_DESTINO_CORE")
+    @Column(name = "cuenta_destino_core")
     private String cuentaDestinoCore;
-    @Column(name = "FECHA_CREACION")
+    @Column(name = "fecha_creacion")
     private OffsetDateTime fechaCreacion;
 
     public DetalleLiquidacion() {
