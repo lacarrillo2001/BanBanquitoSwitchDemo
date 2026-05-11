@@ -126,7 +126,8 @@ public class LotePagoServiceImpl implements LotePagoService {
                 lotePago.getEstado().name(),
                 lotePago.getNombreArchivo(),
                 lotePago.getHashArchivo(),
-                "Lote registrado correctamente."
+                "Lote registrado correctamente.",
+                "VALIDAR"
         );
     }
 

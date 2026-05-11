@@ -7,6 +7,7 @@ public record CargaLoteResponse(
         String estado,
         String nombreArchivo,
         String hashArchivo,
-        String mensaje
+        String mensaje,
+        String siguienteAccion
 ) {
 }

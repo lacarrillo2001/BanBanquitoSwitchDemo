@@ -43,7 +43,7 @@ public class BitacoraAuditoriaSwitch {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "DATOS_DESPUES")
     private JsonNode datosDespues;
-    @Column(name = "DIRECCION_IP")
+    @Column(name = "DIRECCION_IP", columnDefinition = "inet")
     private String direccionIp;
     @Column(name = "AGENTE_USUARIO")
     private String agenteUsuario;
