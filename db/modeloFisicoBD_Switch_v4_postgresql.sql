@@ -1,0 +1,538 @@
+-- ============================================================================
+-- BANCO BANQUITO - SWITCH DE PAGOS MASIVOS
+-- Modelo físico relacional en PostgreSQL
+-- Versión: 1.3 complementada - mejoras aditivas JPA, concurrencia y trazabilidad
+-- Fecha: Abril 2026
+--
+-- Criterio de diseño:
+-- - Base conceptual: switch_pagos_masivos_v3.2.sql.
+-- - Alineado con: BancoBanQuito-Corev1.pdf, BancoBanQuito-RequisitosFuncionales-SwitchPagosMasivos.pdf
+--   y Guia de Trazabilidad-Requisitos-BD.docx.
+-- - Core bancario definitivo: MariaDB. El Switch guarda referencias logicas hacia el Core,
+--   sin foreign keys fisicas entre motores distintos.
+-- - Nomenclatura: tablas y campos en espanol, sin tildes para compatibilidad SQL.
+-- - Motor: PostgreSQL.
+-- - Relacionamiento: FK declaradas por ALTER TABLE para facilitar ingenieria inversa en PowerDesigner.
+-- - Versión 1.3: solo agrega mejoras aditivas; no elimina ni renombra estructuras funcionales.
+-- ============================================================================
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE SCHEMA IF NOT EXISTS switch_banquito;
+SET search_path TO switch_banquito;
+
+-- ============================================================================
+-- 1. CATALOGO: TIPO_SERVICIO
+-- ============================================================================
+CREATE TABLE "TIPO_SERVICIO" (
+    CODIGO              VARCHAR(10)   NOT NULL,
+    NOMBRE              VARCHAR(100)  NOT NULL,
+    DESCRIPCION          VARCHAR(300),
+    ESTADO              VARCHAR(15)   NOT NULL DEFAULT 'ACTIVO',
+    FECHA_CREACION       TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FECHA_ACTUALIZACION  TIMESTAMPTZ,
+    VERSION              INTEGER      NOT NULL DEFAULT 0,
+    CONSTRAINT PK_TIPO_SERVICIO PRIMARY KEY (CODIGO),
+    CONSTRAINT CHK_TIPO_SERVICIO_ESTADO CHECK (ESTADO IN ('ACTIVO','INACTIVO'))
+);
+
+COMMENT ON TABLE "TIPO_SERVICIO" IS 'Catalogo maestro de servicios de pagos masivos. Permite que limites, tarifas y lotes dependan de un catalogo formal y no de textos libres. Ejemplos DRF: NOM nomina, PRV proveedores.';
+COMMENT ON COLUMN "TIPO_SERVICIO".CODIGO IS 'Codigo corto usado en la cabecera del archivo. Ejemplos: NOM, PRV.';
+
+-- ============================================================================
+-- 2. PARAMETRO_SWITCH
+-- ============================================================================
+CREATE TABLE "PARAMETRO_SWITCH" (
+    CODIGO              VARCHAR(50)  NOT NULL,
+    NOMBRE              VARCHAR(100) NOT NULL,
+    VALOR_TEXTO         VARCHAR(255) NOT NULL,
+    TIPO_DATO           VARCHAR(15)  NOT NULL,
+    DESCRIPCION          VARCHAR(500),
+    FECHA_ACTUALIZACION TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ACTUALIZADO_POR     VARCHAR(100),
+    VERSION              INTEGER      NOT NULL DEFAULT 0,
+    CONSTRAINT PK_PARAMETRO_SWITCH PRIMARY KEY (CODIGO),
+    CONSTRAINT CHK_PARAMETRO_SWITCH_TIPO CHECK (TIPO_DATO IN ('NUMERICO','CADENA','FECHA','HORA','BOOLEANO','JSON'))
+);
+
+COMMENT ON TABLE "PARAMETRO_SWITCH" IS 'Parametros operativos simples del Switch: IVA vigente, hora de corte, ventana de duplicidad, reintentos maximos. Evita quemar reglas operativas en codigo.';
+
+-- ============================================================================
+-- 3. LIMITE_TRANSACCION
+-- ============================================================================
+CREATE TABLE "LIMITE_TRANSACCION" (
+    ID_LIMITE           INTEGER       GENERATED ALWAYS AS IDENTITY,
+    TIPO_SERVICIO       VARCHAR(10)   NOT NULL,
+    MONTO_MINIMO        NUMERIC(19,4) NOT NULL DEFAULT 0.01,
+    MONTO_MAXIMO        NUMERIC(19,4) NOT NULL,
+    MONEDA              CHAR(3)       NOT NULL DEFAULT 'USD',
+    VIGENTE_DESDE       DATE          NOT NULL,
+    VIGENTE_HASTA       DATE,
+    ESTADO              VARCHAR(15)   NOT NULL DEFAULT 'ACTIVO',
+    FECHA_CREACION      TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FECHA_ACTUALIZACION  TIMESTAMPTZ,
+    VERSION             INTEGER       NOT NULL DEFAULT 0,
+    CONSTRAINT PK_LIMITE_TRANSACCION PRIMARY KEY (ID_LIMITE),
+    CONSTRAINT CHK_LIMITE_MONTOS CHECK (MONTO_MINIMO > 0 AND MONTO_MAXIMO >= MONTO_MINIMO),
+    CONSTRAINT CHK_LIMITE_VIGENCIA CHECK (VIGENTE_HASTA IS NULL OR VIGENTE_HASTA >= VIGENTE_DESDE),
+    CONSTRAINT CHK_LIMITE_ESTADO CHECK (ESTADO IN ('ACTIVO','INACTIVO'))
+);
+
+COMMENT ON TABLE "LIMITE_TRANSACCION" IS 'Limites minimo y maximo por linea individual y tipo de servicio. Cubre RF-03 del Switch: validar que el monto individual no supere el limite permitido.';
+
+-- ============================================================================
+-- 4. TARIFA_SERVICIO
+-- ============================================================================
+CREATE TABLE "TARIFA_SERVICIO" (
+    ID_TARIFA           INTEGER       GENERATED ALWAYS AS IDENTITY,
+    TIPO_SERVICIO       VARCHAR(10)   NOT NULL,
+    RANGO_DESDE         INTEGER       NOT NULL,
+    RANGO_HASTA         INTEGER,
+    TARIFA_UNITARIA     NUMERIC(10,4) NOT NULL,
+    MONEDA              CHAR(3)       NOT NULL DEFAULT 'USD',
+    VIGENTE_DESDE       DATE          NOT NULL,
+    VIGENTE_HASTA       DATE,
+    ESTADO              VARCHAR(15)   NOT NULL DEFAULT 'ACTIVA',
+    FECHA_CREACION      TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FECHA_ACTUALIZACION  TIMESTAMPTZ,
+    VERSION             INTEGER       NOT NULL DEFAULT 0,
+    CONSTRAINT PK_TARIFA_SERVICIO PRIMARY KEY (ID_TARIFA),
+    CONSTRAINT CHK_TARIFA_RANGO CHECK (RANGO_DESDE >= 1 AND (RANGO_HASTA IS NULL OR RANGO_HASTA >= RANGO_DESDE)),
+    CONSTRAINT CHK_TARIFA_UNITARIA CHECK (TARIFA_UNITARIA >= 0),
+    CONSTRAINT CHK_TARIFA_VIGENCIA CHECK (VIGENTE_HASTA IS NULL OR VIGENTE_HASTA >= VIGENTE_DESDE),
+    CONSTRAINT CHK_TARIFA_ESTADO CHECK (ESTADO IN ('ACTIVA','INACTIVA'))
+);
+
+COMMENT ON TABLE "TARIFA_SERVICIO" IS 'Tarifario escalonado por volumen de transacciones exitosas. Cubre RF-06 y el esquema tarifario comercial del documento Switch.';
+COMMENT ON COLUMN "TARIFA_SERVICIO".RANGO_HASTA IS 'NULL representa rango abierto, por ejemplo 10001 en adelante.';
+
+-- ============================================================================
+-- 5. LOTE_PAGO
+-- ============================================================================
+CREATE TABLE "LOTE_PAGO" (
+    ID_LOTE                    BIGINT        GENERATED ALWAYS AS IDENTITY,
+    UUID_LOTE                  UUID          NOT NULL DEFAULT gen_random_uuid(),
+    CLAVE_IDEMPOTENCIA         UUID          NOT NULL DEFAULT gen_random_uuid(),
+    RUC_EMPRESA                VARCHAR(13)   NOT NULL,
+    ID_CREDENCIAL_WEB_CORE     INTEGER,
+    TIPO_SERVICIO              VARCHAR(10)   NOT NULL,
+    CUENTA_MATRIZ_CARGO        VARCHAR(20)   NOT NULL,
+    FECHA_HORA_GENERACION      TIMESTAMPTZ   NOT NULL,
+    TOTAL_REGISTROS_DECLARADO  INTEGER       NOT NULL,
+    MONTO_TOTAL_DECLARADO      NUMERIC(19,4) NOT NULL,
+    TOTAL_REGISTROS_PIE        INTEGER,
+    MONTO_TOTAL_PIE            NUMERIC(19,4),
+    TOTAL_REGISTROS_VALIDADOS  INTEGER,
+    TOTAL_REGISTROS_RECHAZADOS INTEGER,
+    MONTO_TOTAL_VALIDADO       NUMERIC(19,4),
+    NOMBRE_ARCHIVO             VARCHAR(255)  NOT NULL,
+    HASH_ARCHIVO               VARCHAR(128)  NOT NULL,
+    HASH_PIE_CONTROL           VARCHAR(128),
+    TAMANO_BYTES               BIGINT,
+    FORMATO_ARCHIVO            VARCHAR(10)   NOT NULL,
+    RUTA_ALMACENAMIENTO        VARCHAR(500),
+    CANAL_INGRESO              VARCHAR(15)   NOT NULL,
+    ESTADO                     VARCHAR(25)   NOT NULL DEFAULT 'RECIBIDO',
+    MOTIVO_RECHAZO_GLOBAL      VARCHAR(500),
+    FECHA_RECEPCION            TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FECHA_INICIO_VALIDACION    TIMESTAMPTZ,
+    FECHA_FIN_VALIDACION       TIMESTAMPTZ,
+    FECHA_INICIO_PROCESO       TIMESTAMPTZ,
+    FECHA_FIN_PROCESO          TIMESTAMPTZ,
+    FECHA_CIERRE               TIMESTAMPTZ,
+    FECHA_ACTUALIZACION        TIMESTAMPTZ,
+    VERSION                    INTEGER       NOT NULL DEFAULT 0,
+    CONSTRAINT PK_LOTE_PAGO PRIMARY KEY (ID_LOTE),
+    CONSTRAINT UQ_LOTE_UUID UNIQUE (UUID_LOTE),
+    CONSTRAINT UQ_LOTE_CLAVE_IDEMPOTENCIA UNIQUE (CLAVE_IDEMPOTENCIA),
+    CONSTRAINT CHK_LOTE_RUC CHECK (LENGTH(RUC_EMPRESA) = 13),
+    CONSTRAINT CHK_LOTE_CANAL CHECK (CANAL_INGRESO IN ('PORTAL_WEB','SFTP','API')),
+    CONSTRAINT CHK_LOTE_FORMATO CHECK (FORMATO_ARCHIVO IN ('CSV','TXT')),
+    CONSTRAINT CHK_LOTE_ESTADO CHECK (ESTADO IN ('RECIBIDO','VALIDANDO','VALIDADO','RECHAZADO','ENCOLADO','PROCESANDO','PROCESADO_PARCIAL','PROCESADO_TOTAL','CERRADO','ANULADO')),
+    CONSTRAINT CHK_LOTE_TOTALES_DECLARADOS CHECK (TOTAL_REGISTROS_DECLARADO > 0 AND MONTO_TOTAL_DECLARADO > 0),
+    CONSTRAINT CHK_LOTE_TOTALES_PIE CHECK ((TOTAL_REGISTROS_PIE IS NULL OR TOTAL_REGISTROS_PIE >= 0) AND (MONTO_TOTAL_PIE IS NULL OR MONTO_TOTAL_PIE >= 0)),
+    CONSTRAINT CHK_LOTE_TOTALES_VALIDADOS CHECK (
+        (TOTAL_REGISTROS_VALIDADOS IS NULL OR TOTAL_REGISTROS_VALIDADOS >= 0) AND
+        (TOTAL_REGISTROS_RECHAZADOS IS NULL OR TOTAL_REGISTROS_RECHAZADOS >= 0) AND
+        (MONTO_TOTAL_VALIDADO IS NULL OR MONTO_TOTAL_VALIDADO >= 0)
+    )
+);
+
+COMMENT ON TABLE "LOTE_PAGO" IS 'Representa el archivo/lote completo enviado por la empresa. Incluye datos de cabecera, pie de control, duplicidad, canal, estado y tiempos del proceso. Cubre RF-01, RF-02 y especificacion de archivo del Switch.';
+COMMENT ON COLUMN "LOTE_PAGO".ID_CREDENCIAL_WEB_CORE IS 'Referencia logica hacia CORE MariaDB: CREDENCIAL_WEB.ID. No existe FK fisica por estar en motores distintos.';
+COMMENT ON COLUMN "LOTE_PAGO".CUENTA_MATRIZ_CARGO IS 'Referencia logica hacia CORE MariaDB: CUENTA.NUMERO_CUENTA. Cuenta de donde se debitan pagos y comisiones.';
+COMMENT ON COLUMN "LOTE_PAGO".HASH_ARCHIVO IS 'Hash calculado sobre el archivo recibido. Se usa junto a nombre_archivo y ruc_empresa para detectar duplicidad en ventana configurada.';
+
+-- ============================================================================
+-- 6. LINEA_PAGO
+-- ============================================================================
+CREATE TABLE "LINEA_PAGO" (
+    ID_LINEA                    BIGINT        GENERATED ALWAYS AS IDENTITY,
+    ID_LOTE                     BIGINT        NOT NULL,
+    SECUENCIAL                  INTEGER       NOT NULL,
+    IDENTIFICACION_BENEFICIARIO VARCHAR(20)   NOT NULL,
+    NOMBRE_BENEFICIARIO         VARCHAR(200)  NOT NULL,
+    CUENTA_DESTINO              VARCHAR(20)   NOT NULL,
+    MONTO                       NUMERIC(19,4) NOT NULL,
+    CONCEPTO_REFERENCIA         VARCHAR(300),
+    CORREO_NOTIFICACION         VARCHAR(200),
+    ESTADO                      VARCHAR(25)   NOT NULL DEFAULT 'PENDIENTE',
+    CODIGO_ERROR                VARCHAR(50),
+    MENSAJE_ERROR               VARCHAR(300),
+    UUID_OPERACION_SWITCH       UUID          NOT NULL DEFAULT gen_random_uuid(),
+    UUID_DEBITO_CORE            UUID,
+    UUID_CREDITO_CORE           UUID,
+    UUID_GRUPO_CORE             UUID,
+    FECHA_VALIDACION            TIMESTAMPTZ,
+    FECHA_ENVIO_CORE            TIMESTAMPTZ,
+    FECHA_RESPUESTA_CORE        TIMESTAMPTZ,
+    FECHA_PROCESO               TIMESTAMPTZ,
+    FECHA_ACTUALIZACION         TIMESTAMPTZ,
+    VERSION                     INTEGER       NOT NULL DEFAULT 0,
+    CONSTRAINT PK_LINEA_PAGO PRIMARY KEY (ID_LINEA),
+    CONSTRAINT UQ_LINEA_SECUENCIAL UNIQUE (ID_LOTE, SECUENCIAL),
+    CONSTRAINT UQ_LINEA_UUID_OPERACION UNIQUE (UUID_OPERACION_SWITCH),
+    CONSTRAINT CHK_LINEA_MONTO CHECK (MONTO > 0),
+    CONSTRAINT CHK_LINEA_ESTADO CHECK (ESTADO IN ('PENDIENTE','VALIDADA','RECHAZADA','ENVIADA_CORE','EXITOSA','FALLIDA','REVERSADA'))
+);
+
+COMMENT ON TABLE "LINEA_PAGO" IS 'Detalle de cada instruccion de pago del lote. Una linea fallida no aborta el archivo completo: queda RECHAZADA con codigo/mensaje y el lote continua. Cubre RF-03 y RF-04 del Switch.';
+COMMENT ON COLUMN "LINEA_PAGO".UUID_OPERACION_SWITCH IS 'UUID generado por el Switch para idempotencia de la linea frente al Core. Se envia al Core para evitar doble procesamiento.';
+COMMENT ON COLUMN "LINEA_PAGO".UUID_DEBITO_CORE IS 'UUID de la transaccion de debito generada en el Core, si aplica.';
+COMMENT ON COLUMN "LINEA_PAGO".UUID_CREDITO_CORE IS 'UUID de la transaccion de credito generada en el Core, si aplica.';
+
+-- ============================================================================
+-- 7. HISTORIAL_ESTADO_LOTE
+-- ============================================================================
+CREATE TABLE "HISTORIAL_ESTADO_LOTE" (
+    ID_HISTORIAL        BIGINT       GENERATED ALWAYS AS IDENTITY,
+    ID_LOTE             BIGINT       NOT NULL,
+    ESTADO_ANTERIOR     VARCHAR(25),
+    ESTADO_NUEVO        VARCHAR(25)  NOT NULL,
+    MOTIVO              VARCHAR(500),
+    CAMBIADO_POR        VARCHAR(100),
+    FECHA_CAMBIO        TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT PK_HISTORIAL_ESTADO_LOTE PRIMARY KEY (ID_HISTORIAL),
+    CONSTRAINT CHK_HISTORIAL_ESTADO_LOTE CHECK (ESTADO_NUEVO IN ('RECIBIDO','VALIDANDO','VALIDADO','RECHAZADO','ENCOLADO','PROCESANDO','PROCESADO_PARCIAL','PROCESADO_TOTAL','CERRADO','ANULADO')),
+    CONSTRAINT CHK_HISTORIAL_ESTADO_LOTE_ANTERIOR CHECK (ESTADO_ANTERIOR IS NULL OR ESTADO_ANTERIOR IN ('RECIBIDO','VALIDANDO','VALIDADO','RECHAZADO','ENCOLADO','PROCESANDO','PROCESADO_PARCIAL','PROCESADO_TOTAL','CERRADO','ANULADO'))
+);
+
+COMMENT ON TABLE "HISTORIAL_ESTADO_LOTE" IS 'Bitacora inmutable de transiciones de estado del lote. Soporta auditoria, trazabilidad y UX del monitor de lotes.';
+
+-- ============================================================================
+-- 8. COLA_PROCESAMIENTO
+-- ============================================================================
+CREATE TABLE "COLA_PROCESAMIENTO" (
+    ID_COLA                    BIGINT       GENERATED ALWAYS AS IDENTITY,
+    ID_LOTE                    BIGINT       NOT NULL,
+    FECHA_HABIL_PROGRAMADA     DATE         NOT NULL,
+    FECHA_ENCOLADO             TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FECHA_PROGRAMADA_PROCESO   TIMESTAMPTZ  NOT NULL,
+    ESTADO_COLA                VARCHAR(20)  NOT NULL DEFAULT 'PENDIENTE',
+    PRIORIDAD                  INTEGER      NOT NULL DEFAULT 5,
+    INTENTOS                   INTEGER      NOT NULL DEFAULT 0,
+    MAX_INTENTOS               INTEGER      NOT NULL DEFAULT 3,
+    TOMADO_POR                 VARCHAR(100),
+    TOMADO_EN                  TIMESTAMPTZ,
+    PROXIMO_REINTENTO_EN       TIMESTAMPTZ,
+    ULTIMO_ERROR               VARCHAR(500),
+    FECHA_ACTUALIZACION        TIMESTAMPTZ,
+    VERSION                    INTEGER      NOT NULL DEFAULT 0,
+    CONSTRAINT PK_COLA_PROCESAMIENTO PRIMARY KEY (ID_COLA),
+    CONSTRAINT UQ_COLA_LOTE UNIQUE (ID_LOTE),
+    CONSTRAINT CHK_COLA_ESTADO CHECK (ESTADO_COLA IN ('PENDIENTE','TOMADO','PROCESANDO','COMPLETADO','FALLIDO','REINTENTO','CANCELADO')),
+    CONSTRAINT CHK_COLA_INTENTOS CHECK (INTENTOS >= 0 AND MAX_INTENTOS >= 1),
+    CONSTRAINT CHK_COLA_PRIORIDAD CHECK (PRIORIDAD BETWEEN 1 AND 10)
+);
+
+COMMENT ON TABLE "COLA_PROCESAMIENTO" IS 'Gestiona lotes recibidos fuera de horario, fines de semana o feriados. La fecha habil programada se calcula consultando el Core/FERIADO via API, sin FK fisica.';
+
+-- ============================================================================
+-- 9. INTENTO_PROCESAMIENTO
+-- ============================================================================
+CREATE TABLE "INTENTO_PROCESAMIENTO" (
+    ID_INTENTO         BIGINT       GENERATED ALWAYS AS IDENTITY,
+    ID_COLA            BIGINT       NOT NULL,
+    NUMERO_INTENTO     INTEGER      NOT NULL,
+    FECHA_INICIO       TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FECHA_FIN          TIMESTAMPTZ,
+    ESTADO             VARCHAR(20)  NOT NULL,
+    CODIGO_ERROR       VARCHAR(50),
+    MENSAJE_ERROR      VARCHAR(500),
+    SOLICITUD_CORE     JSONB,
+    RESPUESTA_CORE     JSONB,
+    FECHA_ACTUALIZACION TIMESTAMPTZ,
+    VERSION            INTEGER      NOT NULL DEFAULT 0,
+    CONSTRAINT PK_INTENTO_PROCESAMIENTO PRIMARY KEY (ID_INTENTO),
+    CONSTRAINT UQ_INTENTO_COLA_NUMERO UNIQUE (ID_COLA, NUMERO_INTENTO),
+    CONSTRAINT CHK_INTENTO_ESTADO CHECK (ESTADO IN ('INICIADO','COMPLETADO','FALLIDO','CANCELADO')),
+    CONSTRAINT CHK_INTENTO_NUMERO CHECK (NUMERO_INTENTO >= 1)
+);
+
+COMMENT ON TABLE "INTENTO_PROCESAMIENTO" IS 'Registra intentos de procesamiento y comunicacion con el Core. Permite reintentos controlados y diagnostico de fallas.';
+
+-- ============================================================================
+-- 10. LIQUIDACION_SERVICIO
+-- ============================================================================
+CREATE TABLE "LIQUIDACION_SERVICIO" (
+    ID_LIQUIDACION             BIGINT        GENERATED ALWAYS AS IDENTITY,
+    ID_LOTE                    BIGINT        NOT NULL,
+    ID_TARIFA_APLICADA         INTEGER       NOT NULL,
+    TRANSACCIONES_EXITOSAS     INTEGER       NOT NULL DEFAULT 0,
+    TRANSACCIONES_FALLIDAS     INTEGER       NOT NULL DEFAULT 0,
+    TARIFA_UNITARIA_APLICADA   NUMERIC(10,4) NOT NULL,
+    IVA_PORCENTAJE_APLICADO    NUMERIC(5,4)  NOT NULL,
+    SUBTOTAL_COMISION          NUMERIC(19,4) NOT NULL,
+    MONTO_IVA                  NUMERIC(19,4) NOT NULL,
+    TOTAL_DEBITADO             NUMERIC(19,4) NOT NULL,
+    ESTADO_DEBITO              VARCHAR(20)   NOT NULL DEFAULT 'PENDIENTE',
+    PERMITE_SOBREGIRO          BOOLEAN       NOT NULL DEFAULT TRUE,
+    FECHA_LIQUIDACION          TIMESTAMPTZ,
+    FECHA_CREACION             TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FECHA_ACTUALIZACION        TIMESTAMPTZ,
+    VERSION                    INTEGER       NOT NULL DEFAULT 0,
+    CONSTRAINT PK_LIQUIDACION_SERVICIO PRIMARY KEY (ID_LIQUIDACION),
+    CONSTRAINT UQ_LIQUIDACION_LOTE UNIQUE (ID_LOTE),
+    CONSTRAINT CHK_LIQUIDACION_ESTADO CHECK (ESTADO_DEBITO IN ('PENDIENTE','COMPLETADO','RECHAZADO','REVERSADO')),
+    CONSTRAINT CHK_LIQUIDACION_CANTIDADES CHECK (TRANSACCIONES_EXITOSAS >= 0 AND TRANSACCIONES_FALLIDAS >= 0),
+    CONSTRAINT CHK_LIQUIDACION_VALORES CHECK (TARIFA_UNITARIA_APLICADA >= 0 AND IVA_PORCENTAJE_APLICADO >= 0 AND SUBTOTAL_COMISION >= 0 AND MONTO_IVA >= 0 AND TOTAL_DEBITADO >= 0)
+);
+
+COMMENT ON TABLE "LIQUIDACION_SERVICIO" IS 'Cabecera de la liquidacion de comision e IVA del lote. Cubre RF-06 y RF-07 del Switch. Guarda snapshot de tarifa e IVA para auditoria historica.';
+
+-- ============================================================================
+-- 11. DETALLE_LIQUIDACION
+-- ============================================================================
+CREATE TABLE "DETALLE_LIQUIDACION" (
+    ID_DETALLE               BIGINT        GENERATED ALWAYS AS IDENTITY,
+    ID_LIQUIDACION           BIGINT        NOT NULL,
+    CONCEPTO                 VARCHAR(30)   NOT NULL,
+    MONTO                    NUMERIC(19,4) NOT NULL,
+    UUID_TRANSACCION_CORE    UUID,
+    CUENTA_ORIGEN_CORE       VARCHAR(20),
+    CUENTA_DESTINO_CORE      VARCHAR(20),
+    FECHA_CREACION           TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT PK_DETALLE_LIQUIDACION PRIMARY KEY (ID_DETALLE),
+    CONSTRAINT CHK_DETALLE_CONCEPTO CHECK (CONCEPTO IN ('DEBITO_CUENTA_MATRIZ','CREDITO_INGRESOS','CREDITO_IVA','REVERSO')),
+    CONSTRAINT CHK_DETALLE_MONTO CHECK (MONTO >= 0)
+);
+
+COMMENT ON TABLE "DETALLE_LIQUIDACION" IS 'Detalle de los movimientos contables de la liquidacion: debito a cuenta matriz, credito a ingresos y credito a IVA. Las cuentas son referencias logicas al Core MariaDB.';
+
+-- ============================================================================
+-- 12. NOTIFICACION_BENEFICIARIO
+-- ============================================================================
+CREATE TABLE "NOTIFICACION_BENEFICIARIO" (
+    ID_NOTIFICACION          BIGINT       GENERATED ALWAYS AS IDENTITY,
+    ID_LINEA                 BIGINT       NOT NULL,
+    CORREO_DESTINO           VARCHAR(200) NOT NULL,
+    TIPO_NOTIFICACION        VARCHAR(25)  NOT NULL DEFAULT 'PAGO_EXITOSO',
+    ASUNTO                   VARCHAR(200),
+    CONTENIDO                JSONB,
+    ESTADO_ENVIO             VARCHAR(15)  NOT NULL DEFAULT 'PENDIENTE',
+    FECHA_ENVIO              TIMESTAMPTZ,
+    ERROR_ENVIO              VARCHAR(300),
+    REINTENTOS               INTEGER      NOT NULL DEFAULT 0,
+    PROXIMO_REINTENTO_EN     TIMESTAMPTZ,
+    FECHA_ACTUALIZACION       TIMESTAMPTZ,
+    VERSION                   INTEGER      NOT NULL DEFAULT 0,
+    CONSTRAINT PK_NOTIFICACION_BENEFICIARIO PRIMARY KEY (ID_NOTIFICACION),
+    CONSTRAINT CHK_NOTIFICACION_TIPO CHECK (TIPO_NOTIFICACION IN ('PAGO_EXITOSO','PAGO_RECHAZADO','PAGO_REVERSADO')),
+    CONSTRAINT CHK_NOTIFICACION_ESTADO CHECK (ESTADO_ENVIO IN ('PENDIENTE','ENVIADA','ERROR','CANCELADA')),
+    CONSTRAINT CHK_NOTIFICACION_REINTENTOS CHECK (REINTENTOS >= 0)
+);
+
+COMMENT ON TABLE "NOTIFICACION_BENEFICIARIO" IS 'Cola/outbox de notificaciones a beneficiarios. Evita depender del SMTP dentro de la transaccion financiera y permite reintentos.';
+
+-- ============================================================================
+-- 13. REPORTE_CIERRE
+-- ============================================================================
+CREATE TABLE "REPORTE_CIERRE" (
+    ID_REPORTE             BIGINT       GENERATED ALWAYS AS IDENTITY,
+    ID_LOTE                BIGINT       NOT NULL,
+    TIPO_REPORTE           VARCHAR(35)  NOT NULL,
+    CONTENIDO_JSON         JSONB        NOT NULL,
+    NOMBRE_ARCHIVO         VARCHAR(255),
+    FORMATO_ARCHIVO        VARCHAR(10),
+    URL_ARCHIVO            VARCHAR(500),
+    HASH_REPORTE           VARCHAR(128),
+    FECHA_GENERACION       TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    DESCARGADO_EMPRESA     BOOLEAN      NOT NULL DEFAULT FALSE,
+    FECHA_DESCARGA         TIMESTAMPTZ,
+    FECHA_ACTUALIZACION    TIMESTAMPTZ,
+    VERSION                INTEGER      NOT NULL DEFAULT 0,
+    CONSTRAINT PK_REPORTE_CIERRE PRIMARY KEY (ID_REPORTE),
+    CONSTRAINT UQ_REPORTE_LOTE_TIPO UNIQUE (ID_LOTE, TIPO_REPORTE),
+    CONSTRAINT CHK_REPORTE_TIPO CHECK (TIPO_REPORTE IN ('COMPROBANTE_LIQUIDACION','REPORTE_NOVEDADES')),
+    CONSTRAINT CHK_REPORTE_FORMATO CHECK (FORMATO_ARCHIVO IS NULL OR FORMATO_ARCHIVO IN ('PDF','CSV','XLSX','JSON'))
+);
+
+COMMENT ON TABLE "REPORTE_CIERRE" IS 'Reportes finales del lote: comprobante de liquidacion corporativa y reporte de novedades. Cubre RF-08 del Switch.';
+
+-- ============================================================================
+-- 14. BITACORA_AUDITORIA_SWITCH
+-- ============================================================================
+CREATE TABLE "BITACORA_AUDITORIA_SWITCH" (
+    ID_AUDITORIA           BIGINT       GENERATED ALWAYS AS IDENTITY,
+    TIPO_ACTOR             VARCHAR(20)  NOT NULL,
+    ID_ACTOR               VARCHAR(50),
+    RUC_EMPRESA            VARCHAR(13),
+    ACCION                 VARCHAR(100) NOT NULL,
+    ENTIDAD                VARCHAR(80)  NOT NULL,
+    ID_ENTIDAD             VARCHAR(80),
+    DATOS_ANTES            JSONB,
+    DATOS_DESPUES          JSONB,
+    DIRECCION_IP           INET,
+    AGENTE_USUARIO         VARCHAR(300),
+    FECHA_CREACION         TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT PK_BITACORA_AUDITORIA_SWITCH PRIMARY KEY (ID_AUDITORIA),
+    CONSTRAINT CHK_BITACORA_TIPO_ACTOR CHECK (TIPO_ACTOR IN ('EMPRESA','USUARIO_CORE','SISTEMA','API'))
+);
+
+COMMENT ON TABLE "BITACORA_AUDITORIA_SWITCH" IS 'Bitacora inmutable del Switch. Registra acciones relevantes para trazabilidad, seguridad y auditoria operativa.';
+
+-- ============================================================================
+-- COMENTARIOS DE CONTROL DE CONCURRENCIA OPTIMISTA - JPA @Version
+-- ============================================================================
+COMMENT ON COLUMN "TIPO_SERVICIO".VERSION IS 'Version para control de concurrencia optimista JPA';
+COMMENT ON COLUMN "PARAMETRO_SWITCH".VERSION IS 'Version para control de concurrencia optimista JPA';
+COMMENT ON COLUMN "LIMITE_TRANSACCION".VERSION IS 'Version para control de concurrencia optimista JPA';
+COMMENT ON COLUMN "TARIFA_SERVICIO".VERSION IS 'Version para control de concurrencia optimista JPA';
+COMMENT ON COLUMN "LOTE_PAGO".VERSION IS 'Version para control de concurrencia optimista JPA';
+COMMENT ON COLUMN "LINEA_PAGO".VERSION IS 'Version para control de concurrencia optimista JPA';
+COMMENT ON COLUMN "COLA_PROCESAMIENTO".VERSION IS 'Version para control de concurrencia optimista JPA';
+COMMENT ON COLUMN "INTENTO_PROCESAMIENTO".VERSION IS 'Version para control de concurrencia optimista JPA';
+COMMENT ON COLUMN "LIQUIDACION_SERVICIO".VERSION IS 'Version para control de concurrencia optimista JPA';
+COMMENT ON COLUMN "NOTIFICACION_BENEFICIARIO".VERSION IS 'Version para control de concurrencia optimista JPA';
+COMMENT ON COLUMN "REPORTE_CIERRE".VERSION IS 'Version para control de concurrencia optimista JPA';
+
+-- ============================================================================
+-- INDICES
+-- ============================================================================
+CREATE INDEX IDX_TIPO_SERVICIO_ESTADO ON "TIPO_SERVICIO" (ESTADO);
+CREATE INDEX IDX_LIMITE_TIPO_ESTADO ON "LIMITE_TRANSACCION" (TIPO_SERVICIO, ESTADO, VIGENTE_DESDE, VIGENTE_HASTA);
+CREATE INDEX IDX_TARIFA_TIPO_RANGO ON "TARIFA_SERVICIO" (TIPO_SERVICIO, ESTADO, RANGO_DESDE, RANGO_HASTA);
+
+CREATE INDEX IDX_LOTE_RUC_FECHA ON "LOTE_PAGO" (RUC_EMPRESA, FECHA_RECEPCION DESC);
+CREATE INDEX IDX_LOTE_ESTADO ON "LOTE_PAGO" (ESTADO);
+CREATE INDEX IDX_LOTE_CUENTA_MATRIZ ON "LOTE_PAGO" (CUENTA_MATRIZ_CARGO);
+CREATE INDEX IDX_LOTE_DUPLICIDAD_ARCHIVO ON "LOTE_PAGO" (RUC_EMPRESA, NOMBRE_ARCHIVO, HASH_ARCHIVO, FECHA_RECEPCION DESC);
+CREATE INDEX IDX_LOTE_CANAL_ESTADO ON "LOTE_PAGO" (CANAL_INGRESO, ESTADO);
+
+CREATE INDEX IDX_LINEA_LOTE_ESTADO ON "LINEA_PAGO" (ID_LOTE, ESTADO);
+CREATE INDEX IDX_LINEA_CUENTA_DESTINO ON "LINEA_PAGO" (CUENTA_DESTINO);
+CREATE INDEX IDX_LINEA_UUID_OPERACION ON "LINEA_PAGO" (UUID_OPERACION_SWITCH);
+CREATE INDEX IDX_LINEA_UUID_DEBITO_CORE ON "LINEA_PAGO" (UUID_DEBITO_CORE);
+CREATE INDEX IDX_LINEA_UUID_CREDITO_CORE ON "LINEA_PAGO" (UUID_CREDITO_CORE);
+
+CREATE INDEX IDX_HISTORIAL_LOTE_FECHA ON "HISTORIAL_ESTADO_LOTE" (ID_LOTE, FECHA_CAMBIO DESC);
+CREATE INDEX IDX_COLA_SCHEDULER ON "COLA_PROCESAMIENTO" (ESTADO_COLA, FECHA_PROGRAMADA_PROCESO, PRIORIDAD);
+CREATE INDEX IDX_INTENTO_COLA ON "INTENTO_PROCESAMIENTO" (ID_COLA, NUMERO_INTENTO);
+
+CREATE INDEX IDX_LIQUIDACION_LOTE ON "LIQUIDACION_SERVICIO" (ID_LOTE);
+CREATE INDEX IDX_DETALLE_LIQUIDACION ON "DETALLE_LIQUIDACION" (ID_LIQUIDACION);
+CREATE INDEX IDX_DETALLE_UUID_CORE ON "DETALLE_LIQUIDACION" (UUID_TRANSACCION_CORE);
+
+CREATE INDEX IDX_NOTIFICACION_ESTADO ON "NOTIFICACION_BENEFICIARIO" (ESTADO_ENVIO, PROXIMO_REINTENTO_EN);
+CREATE INDEX IDX_REPORTE_LOTE ON "REPORTE_CIERRE" (ID_LOTE);
+CREATE INDEX IDX_AUDITORIA_RUC_FECHA ON "BITACORA_AUDITORIA_SWITCH" (RUC_EMPRESA, FECHA_CREACION DESC);
+CREATE INDEX IDX_AUDITORIA_ENTIDAD ON "BITACORA_AUDITORIA_SWITCH" (ENTIDAD, ID_ENTIDAD);
+
+-- ============================================================================
+-- RELACIONES - FOREIGN KEYS
+-- ============================================================================
+ALTER TABLE "LIMITE_TRANSACCION"
+    ADD CONSTRAINT FK_LIMITE_TIPO_SERVICIO
+    FOREIGN KEY (TIPO_SERVICIO) REFERENCES "TIPO_SERVICIO" (CODIGO)
+    ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE "TARIFA_SERVICIO"
+    ADD CONSTRAINT FK_TARIFA_TIPO_SERVICIO
+    FOREIGN KEY (TIPO_SERVICIO) REFERENCES "TIPO_SERVICIO" (CODIGO)
+    ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE "LOTE_PAGO"
+    ADD CONSTRAINT FK_LOTE_TIPO_SERVICIO
+    FOREIGN KEY (TIPO_SERVICIO) REFERENCES "TIPO_SERVICIO" (CODIGO)
+    ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE "LINEA_PAGO"
+    ADD CONSTRAINT FK_LINEA_LOTE
+    FOREIGN KEY (ID_LOTE) REFERENCES "LOTE_PAGO" (ID_LOTE)
+    ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE "HISTORIAL_ESTADO_LOTE"
+    ADD CONSTRAINT FK_HISTORIAL_LOTE
+    FOREIGN KEY (ID_LOTE) REFERENCES "LOTE_PAGO" (ID_LOTE)
+    ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE "COLA_PROCESAMIENTO"
+    ADD CONSTRAINT FK_COLA_LOTE
+    FOREIGN KEY (ID_LOTE) REFERENCES "LOTE_PAGO" (ID_LOTE)
+    ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE "INTENTO_PROCESAMIENTO"
+    ADD CONSTRAINT FK_INTENTO_COLA
+    FOREIGN KEY (ID_COLA) REFERENCES "COLA_PROCESAMIENTO" (ID_COLA)
+    ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE "LIQUIDACION_SERVICIO"
+    ADD CONSTRAINT FK_LIQUIDACION_LOTE
+    FOREIGN KEY (ID_LOTE) REFERENCES "LOTE_PAGO" (ID_LOTE)
+    ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE "LIQUIDACION_SERVICIO"
+    ADD CONSTRAINT FK_LIQUIDACION_TARIFA
+    FOREIGN KEY (ID_TARIFA_APLICADA) REFERENCES "TARIFA_SERVICIO" (ID_TARIFA)
+    ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE "DETALLE_LIQUIDACION"
+    ADD CONSTRAINT FK_DETALLE_LIQUIDACION
+    FOREIGN KEY (ID_LIQUIDACION) REFERENCES "LIQUIDACION_SERVICIO" (ID_LIQUIDACION)
+    ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE "NOTIFICACION_BENEFICIARIO"
+    ADD CONSTRAINT FK_NOTIFICACION_LINEA
+    FOREIGN KEY (ID_LINEA) REFERENCES "LINEA_PAGO" (ID_LINEA)
+    ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE "REPORTE_CIERRE"
+    ADD CONSTRAINT FK_REPORTE_LOTE
+    FOREIGN KEY (ID_LOTE) REFERENCES "LOTE_PAGO" (ID_LOTE)
+    ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+-- ============================================================================
+-- DATOS BASE MINIMOS
+-- ============================================================================
+INSERT INTO "TIPO_SERVICIO" (CODIGO, NOMBRE, DESCRIPCION) VALUES
+    ('NOM', 'Pago de Nomina', 'Dispersión masiva de sueldos y beneficios a empleados.'),
+    ('PRV', 'Pago a Proveedores', 'Liquidación masiva de obligaciones comerciales a proveedores.');
+
+INSERT INTO "PARAMETRO_SWITCH" (CODIGO, NOMBRE, VALOR_TEXTO, TIPO_DATO, DESCRIPCION, ACTUALIZADO_POR) VALUES
+    ('IVA_PORCENTAJE', 'Tasa de IVA Vigente', '0.15', 'NUMERICO', 'IVA vigente aplicado sobre la comision del servicio. 0.15 equivale a 15%.', 'SISTEMA'),
+    ('HORA_CORTE_PROCESO', 'Hora de Corte para Procesamiento Inmediato', '18:00', 'HORA', 'Lotes recibidos antes de esta hora en dia habil se procesan inmediatamente.', 'SISTEMA'),
+    ('HORA_INICIO_LOTES_ENCOLADOS', 'Hora de Inicio de Lotes Encolados', '00:01', 'HORA', 'Hora de arranque para procesar lotes encolados al siguiente dia habil.', 'SISTEMA'),
+    ('VENTANA_DUPLICIDAD_DIAS', 'Ventana de Deteccion de Duplicidad', '30', 'NUMERICO', 'Ventana en dias para rechazar archivos duplicados por nombre y hash.', 'SISTEMA'),
+    ('MAX_REINTENTOS_LOTE', 'Maximo de Reintentos por Lote', '3', 'NUMERICO', 'Numero maximo de reintentos de procesamiento o comunicacion con Core.', 'SISTEMA');
+
+INSERT INTO "LIMITE_TRANSACCION" (TIPO_SERVICIO, MONTO_MINIMO, MONTO_MAXIMO, MONEDA, VIGENTE_DESDE) VALUES
+    ('NOM', 0.01, 50000.00, 'USD', CURRENT_DATE),
+    ('PRV', 0.01, 100000.00, 'USD', CURRENT_DATE);
+
+INSERT INTO "TARIFA_SERVICIO" (TIPO_SERVICIO, RANGO_DESDE, RANGO_HASTA, TARIFA_UNITARIA, MONEDA, VIGENTE_DESDE) VALUES
+    ('NOM', 1, 10, 0.5000, 'USD', CURRENT_DATE),
+    ('NOM', 11, 100, 0.4000, 'USD', CURRENT_DATE),
+    ('NOM', 101, 500, 0.3000, 'USD', CURRENT_DATE),
+    ('NOM', 501, 1000, 0.2000, 'USD', CURRENT_DATE),
+    ('NOM', 1001, 10000, 0.1000, 'USD', CURRENT_DATE),
+    ('NOM', 10001, NULL, 0.0500, 'USD', CURRENT_DATE),
+    ('PRV', 1, 10, 0.5000, 'USD', CURRENT_DATE),
+    ('PRV', 11, 100, 0.4000, 'USD', CURRENT_DATE),
+    ('PRV', 101, 500, 0.3000, 'USD', CURRENT_DATE),
+    ('PRV', 501, 1000, 0.2000, 'USD', CURRENT_DATE),
+    ('PRV', 1001, 10000, 0.1000, 'USD', CURRENT_DATE),
+    ('PRV', 10001, NULL, 0.0500, 'USD', CURRENT_DATE);
+
+-- ============================================================================
+-- FIN DEL SCRIPT
+-- ============================================================================

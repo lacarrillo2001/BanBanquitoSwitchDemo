@@ -1,0 +1,27 @@
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  server: {
+    host: "localhost",
+    port: 3000,
+    open: true,
+    proxy: {
+      "/api": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        secure: false
+      }
+    }
+  },
+  preview: {
+    host: "localhost",
+    port: 3000,
+    proxy: {
+      "/api": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        secure: false
+      }
+    }
+  }
+});

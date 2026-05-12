@@ -24,13 +24,18 @@ public class TipoServicioServiceImpl implements TipoServicioService {
 
     @Override
     public TipoServicioResponse obtenerPorCodigo(String codigo) {
+        TipoServicio tipoServicio = obtenerEntidadPorCodigo(codigo);
+        return construirResponse(tipoServicio);
+    }
+
+    @Override
+    public TipoServicio obtenerEntidadPorCodigo(String codigo) {
         validarCodigo(codigo);
-        TipoServicio tipoServicio = tipoServicioRepository.findByCodigo(codigo)
+        return tipoServicioRepository.findByCodigo(codigo)
                 .orElseThrow(() -> new RecursoNoEncontradoException(
                         "TIPO_SERVICIO_NO_ENCONTRADO",
                         "No existe un tipo de servicio con el codigo " + codigo + "."
                 ));
-        return construirResponse(tipoServicio);
     }
 
     @Override

@@ -8,6 +8,8 @@ import com.banquito.switchpagos.common.exception.SolicitudInvalidaException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.OffsetDateTime;
 
 @Service
@@ -33,7 +35,7 @@ public class AuditoriaSwitchServiceImpl implements AuditoriaSwitchService {
         bitacoraAuditoriaSwitch.setIdEntidad(registroAuditoriaRequest.getIdEntidad());
         bitacoraAuditoriaSwitch.setDatosAntes(registroAuditoriaRequest.getDatosAntes());
         bitacoraAuditoriaSwitch.setDatosDespues(registroAuditoriaRequest.getDatosDespues());
-        bitacoraAuditoriaSwitch.setDireccionIp(registroAuditoriaRequest.getDireccionIp());
+        bitacoraAuditoriaSwitch.setDireccionIp(resolverDireccionIp(registroAuditoriaRequest.getDireccionIp()));
         bitacoraAuditoriaSwitch.setAgenteUsuario(registroAuditoriaRequest.getAgenteUsuario());
         bitacoraAuditoriaSwitch.setFechaCreacion(OffsetDateTime.now());
 
@@ -63,6 +65,21 @@ public class AuditoriaSwitchServiceImpl implements AuditoriaSwitchService {
             throw new SolicitudInvalidaException(
                     "AUDITORIA_ENTIDAD_REQUERIDA",
                     "La entidad auditada es obligatoria."
+            );
+        }
+    }
+
+    private InetAddress resolverDireccionIp(String direccionIp) {
+        if (direccionIp == null || direccionIp.isBlank()) {
+            return null;
+        }
+        try {
+            return InetAddress.getByName(direccionIp.trim());
+        } catch (UnknownHostException exception) {
+            throw new SolicitudInvalidaException(
+                    "AUDITORIA_DIRECCION_IP_INVALIDA",
+                    "La direccion IP de auditoria no tiene un formato valido.",
+                    exception
             );
         }
     }

@@ -138,7 +138,7 @@ public class LotePagoServiceImpl implements LotePagoService {
                                                                Pageable pageable) {
         TipoServicio tipoServicioFiltro = tipoServicio == null || tipoServicio.isBlank()
                 ? null
-                : new TipoServicio(tipoServicio);
+                : tipoServicioService.obtenerEntidadPorCodigo(tipoServicio);
         Page<ConsultaLoteResponse> pagina = lotePagoRepository.consultarPorFiltros(
                 rucEmpresa,
                 estado,
@@ -324,7 +324,7 @@ public class LotePagoServiceImpl implements LotePagoService {
         lotePago.setClaveIdempotencia(UUID.randomUUID());
         lotePago.setRucEmpresa(archivoPagoParseado.cabecera().rucEmpresa());
         lotePago.setIdCredencialWebCore(registroLoteInternalDto.idCredencialWebCore());
-        lotePago.setTipoServicio(new TipoServicio(archivoPagoParseado.cabecera().tipoServicio()));
+        lotePago.setTipoServicio(tipoServicioService.obtenerEntidadPorCodigo(archivoPagoParseado.cabecera().tipoServicio()));
         lotePago.setCuentaMatrizCargo(archivoPagoParseado.cabecera().cuentaMatrizCargo());
         lotePago.setFechaHoraGeneracion(archivoPagoParseado.cabecera().fechaHoraGeneracion());
         lotePago.setTotalRegistrosDeclarado(archivoPagoParseado.cabecera().totalRegistrosDeclarado());

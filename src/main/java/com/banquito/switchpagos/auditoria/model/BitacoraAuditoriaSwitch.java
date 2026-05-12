@@ -13,6 +13,7 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.net.InetAddress;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 
@@ -44,7 +45,7 @@ public class BitacoraAuditoriaSwitch {
     @Column(name = "datos_despues")
     private JsonNode datosDespues;
     @Column(name = "direccion_ip", columnDefinition = "inet")
-    private String direccionIp;
+    private InetAddress direccionIp;
     @Column(name = "agente_usuario")
     private String agenteUsuario;
     @Column(name = "fecha_creacion")
@@ -75,8 +76,8 @@ public class BitacoraAuditoriaSwitch {
     public void setDatosAntes(JsonNode datosAntes) { this.datosAntes = datosAntes; }
     public JsonNode getDatosDespues() { return datosDespues; }
     public void setDatosDespues(JsonNode datosDespues) { this.datosDespues = datosDespues; }
-    public String getDireccionIp() { return direccionIp; }
-    public void setDireccionIp(String direccionIp) { this.direccionIp = direccionIp; }
+    public InetAddress getDireccionIp() { return direccionIp; }
+    public void setDireccionIp(InetAddress direccionIp) { this.direccionIp = direccionIp; }
     public String getAgenteUsuario() { return agenteUsuario; }
     public void setAgenteUsuario(String agenteUsuario) { this.agenteUsuario = agenteUsuario; }
     public OffsetDateTime getFechaCreacion() { return fechaCreacion; }
