@@ -18,7 +18,7 @@ Ejecutar la coleccion sobre una base limpia o con archivos que no hayan sido car
 ## Archivos agregados
 
 - `lote_error_monto_supera_limite.csv`: monto individual mayor al limite NOM, pero menor al saldo simulado.
-- `lote_error_monto_menor_minimo.csv`: monto individual debajo del minimo configurado.
+- `lote_error_monto_menor_minimo.csv`: monto individual positivo debajo del minimo configurado, para pasar carga y fallar en procesamiento.
 - `lote_mixto_multiples_errores.csv`: una linea exitosa y cuatro rechazos distintos.
 - `lote_todas_lineas_rechazadas.csv`: procesamiento sin transacciones exitosas, liquidacion debe rechazar.
 - `lote_prv_valido.csv`: flujo exitoso para tipo de servicio PRV.

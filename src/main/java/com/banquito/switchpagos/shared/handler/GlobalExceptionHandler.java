@@ -11,6 +11,7 @@ import com.banquito.switchpagos.shared.exception.ReglaNegocioException;
 import com.banquito.switchpagos.shared.exception.SolicitudInvalidaException;
 import com.banquito.switchpagos.shared.exception.SwitchPagosException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -21,6 +22,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Locale;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -95,6 +97,13 @@ public class GlobalExceptionHandler {
         return construirRespuesta(solicitudInvalidaException, HttpStatus.BAD_REQUEST, request, List.of(detalle));
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> manejarViolacionIntegridad(DataIntegrityViolationException exception,
+                                                                    HttpServletRequest request) {
+        SolicitudInvalidaException solicitudInvalidaException = construirSolicitudInvalidaIntegridad(exception);
+        return construirRespuesta(solicitudInvalidaException, HttpStatus.BAD_REQUEST, request, List.of());
+    }
+
     private ResponseEntity<ErrorResponse> construirRespuesta(SwitchPagosException exception, HttpStatus status,
                                                              HttpServletRequest request, List<ErrorDetalle> detalles) {
         ErrorResponse response = new ErrorResponse(
@@ -107,5 +116,64 @@ public class GlobalExceptionHandler {
                 detalles
         );
         return ResponseEntity.status(status).body(response);
+    }
+
+    private SolicitudInvalidaException construirSolicitudInvalidaIntegridad(DataIntegrityViolationException exception) {
+        String mensajeTecnico = obtenerMensajeCausaRaiz(exception).toLowerCase(Locale.ROOT);
+        if (mensajeTecnico.contains("chk_lote_totales_declarados")) {
+            return new SolicitudInvalidaException(
+                    "TOTALES_LOTE_INVALIDOS",
+                    "El lote debe declarar al menos un registro y un monto total mayor a cero.",
+                    exception
+            );
+        }
+        if (mensajeTecnico.contains("chk_linea_monto")) {
+            return new SolicitudInvalidaException(
+                    "MONTO_LINEA_INVALIDO",
+                    "Todas las lineas de pago deben tener un monto mayor a cero.",
+                    exception
+            );
+        }
+        if (mensajeTecnico.contains("uq_lote_uuid")
+                || mensajeTecnico.contains("uq_lote_clave_idempotencia")
+                || mensajeTecnico.contains("uq_linea_secuencial")
+                || mensajeTecnico.contains("uq_linea_uuid_operacion")
+                || mensajeTecnico.contains("duplicate key")) {
+            return new SolicitudInvalidaException(
+                    "REGISTRO_DUPLICADO",
+                    "La solicitud intenta registrar informacion que ya existe.",
+                    exception
+            );
+        }
+        if (mensajeTecnico.contains("violates foreign key constraint")
+                || mensajeTecnico.contains("viola la llave foranea")
+                || mensajeTecnico.contains("viola la restriccion de llave foranea")) {
+            return new SolicitudInvalidaException(
+                    "REFERENCIA_INVALIDA",
+                    "La solicitud contiene una referencia que no existe o no esta disponible.",
+                    exception
+            );
+        }
+        if (mensajeTecnico.contains("value too long")
+                || mensajeTecnico.contains("valor es demasiado largo")) {
+            return new SolicitudInvalidaException(
+                    "LONGITUD_CAMPO_INVALIDA",
+                    "Uno o mas campos exceden la longitud permitida.",
+                    exception
+            );
+        }
+        return new SolicitudInvalidaException(
+                "DATOS_NO_CUMPLEN_REGLAS",
+                "La solicitud contiene datos que no cumplen las reglas de integridad del sistema.",
+                exception
+        );
+    }
+
+    private String obtenerMensajeCausaRaiz(Throwable throwable) {
+        Throwable causa = throwable;
+        while (causa.getCause() != null) {
+            causa = causa.getCause();
+        }
+        return causa.getMessage() != null ? causa.getMessage() : throwable.getMessage();
     }
 }
