@@ -7,6 +7,8 @@ public final class CodigoParametroSwitch {
     public static final String HORA_INICIO_LOTES_ENCOLADOS = "HORA_INICIO_LOTES_ENCOLADOS";
     public static final String VENTANA_DUPLICIDAD_DIAS = "VENTANA_DUPLICIDAD_DIAS";
     public static final String MAX_REINTENTOS_LOTE = "MAX_REINTENTOS_LOTE";
+    public static final String CUENTA_INGRESOS_COMISION = "CUENTA_INGRESOS_COMISION";
+    public static final String CUENTA_IVA_RETENIDO = "CUENTA_IVA_RETENIDO";
 
     private CodigoParametroSwitch() {
     }

@@ -504,16 +504,28 @@ ALTER TABLE "REPORTE_CIERRE"
 -- ============================================================================
 -- DATOS BASE MINIMOS
 -- ============================================================================
+-- ============================================================================
+-- DATA INICIAL DE PRUEBA (SEED DATA)
+-- ============================================================================
+
+-- Limpieza de tablas para evitar duplicados si se ejecuta el script mas de una vez
+DELETE FROM "TARIFA_SERVICIO";
+DELETE FROM "LIMITE_TRANSACCION";
+DELETE FROM "PARAMETRO_SWITCH";
+DELETE FROM "TIPO_SERVICIO";
+
 INSERT INTO "TIPO_SERVICIO" (CODIGO, NOMBRE, DESCRIPCION) VALUES
-    ('NOM', 'Pago de Nomina', 'Dispersión masiva de sueldos y beneficios a empleados.'),
-    ('PRV', 'Pago a Proveedores', 'Liquidación masiva de obligaciones comerciales a proveedores.');
+    ('NOM', 'Pago de Nomina', 'Transferencias masivas para pago de salarios a empleados.'),
+    ('PRV', 'Pago a Proveedores', 'Pagos masivos a cuentas de proveedores por servicios o productos.');
 
 INSERT INTO "PARAMETRO_SWITCH" (CODIGO, NOMBRE, VALOR_TEXTO, TIPO_DATO, DESCRIPCION, ACTUALIZADO_POR) VALUES
     ('IVA_PORCENTAJE', 'Tasa de IVA Vigente', '0.15', 'NUMERICO', 'IVA vigente aplicado sobre la comision del servicio. 0.15 equivale a 15%.', 'SISTEMA'),
     ('HORA_CORTE_PROCESO', 'Hora de Corte para Procesamiento Inmediato', '18:00', 'HORA', 'Lotes recibidos antes de esta hora en dia habil se procesan inmediatamente.', 'SISTEMA'),
     ('HORA_INICIO_LOTES_ENCOLADOS', 'Hora de Inicio de Lotes Encolados', '00:01', 'HORA', 'Hora de arranque para procesar lotes encolados al siguiente dia habil.', 'SISTEMA'),
     ('VENTANA_DUPLICIDAD_DIAS', 'Ventana de Deteccion de Duplicidad', '30', 'NUMERICO', 'Ventana en dias para rechazar archivos duplicados por nombre y hash.', 'SISTEMA'),
-    ('MAX_REINTENTOS_LOTE', 'Maximo de Reintentos por Lote', '3', 'NUMERICO', 'Numero maximo de reintentos de procesamiento o comunicacion con Core.', 'SISTEMA');
+    ('MAX_REINTENTOS_LOTE', 'Maximo de Reintentos por Lote', '3', 'NUMERICO', 'Numero maximo de reintentos de procesamiento o comunicacion con Core.', 'SISTEMA'),
+    ('CUENTA_INGRESOS_COMISION', 'Cuenta de Ingresos por Comisiones', '410101000000000001', 'CADENA', 'Cuenta contable para registrar los ingresos por comisiones del Switch.', 'SISTEMA'),
+    ('CUENTA_IVA_RETENIDO', 'Cuenta de IVA Retenido', '210301000000000001', 'CADENA', 'Cuenta contable para registrar el IVA retenido en las comisiones.', 'SISTEMA');
 
 INSERT INTO "LIMITE_TRANSACCION" (TIPO_SERVICIO, MONTO_MINIMO, MONTO_MAXIMO, MONEDA, VIGENTE_DESDE) VALUES
     ('NOM', 0.01, 50000.00, 'USD', CURRENT_DATE),

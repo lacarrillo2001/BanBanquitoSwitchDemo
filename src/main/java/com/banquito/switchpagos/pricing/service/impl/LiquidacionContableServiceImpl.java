@@ -13,6 +13,8 @@ import com.banquito.switchpagos.batch.dto.internal.LoteProcesamientoInternalDto;
 import com.banquito.switchpagos.batch.enums.EstadoLote;
 import com.banquito.switchpagos.batch.model.LotePago;
 import com.banquito.switchpagos.batch.service.LotePagoService;
+import com.banquito.switchpagos.parameter.constants.CodigoParametroSwitch;
+import com.banquito.switchpagos.parameter.service.ParametroSwitchService;
 import com.banquito.switchpagos.pricing.constants.CuentaContableCore;
 import com.banquito.switchpagos.pricing.dto.api.LiquidarLoteResponse;
 import com.banquito.switchpagos.pricing.dto.internal.CalculoLiquidacionInternalDto;
@@ -55,6 +57,7 @@ public class LiquidacionContableServiceImpl implements LiquidacionContableServic
     private final EntityManager entityManager;
     private final LiquidacionServicioMapper liquidacionServicioMapper;
     private final DetalleLiquidacionMapper detalleLiquidacionMapper;
+    private final ParametroSwitchService parametroSwitchService;
 
     public LiquidacionContableServiceImpl(LiquidacionServicioRepository liquidacionServicioRepository,
                                           DetalleLiquidacionRepository detalleLiquidacionRepository,
@@ -65,7 +68,8 @@ public class LiquidacionContableServiceImpl implements LiquidacionContableServic
                                           ObjectMapper objectMapper,
                                           EntityManager entityManager,
                                           LiquidacionServicioMapper liquidacionServicioMapper,
-                                          DetalleLiquidacionMapper detalleLiquidacionMapper) {
+                                          DetalleLiquidacionMapper detalleLiquidacionMapper,
+                                          ParametroSwitchService parametroSwitchService) {
         this.liquidacionServicioRepository = liquidacionServicioRepository;
         this.detalleLiquidacionRepository = detalleLiquidacionRepository;
         this.tarifajeService = tarifajeService;
@@ -76,6 +80,7 @@ public class LiquidacionContableServiceImpl implements LiquidacionContableServic
         this.entityManager = entityManager;
         this.liquidacionServicioMapper = liquidacionServicioMapper;
         this.detalleLiquidacionMapper = detalleLiquidacionMapper;
+        this.parametroSwitchService = parametroSwitchService;
     }
 
     @Override
@@ -169,10 +174,13 @@ public class LiquidacionContableServiceImpl implements LiquidacionContableServic
                                                                              CalculoLiquidacionInternalDto calculo) {
         List<MovimientoContableInternalDto> movimientos = new ArrayList<>();
         UUID uuidGrupoCore = UUID.randomUUID();
+        String cuentaIngresos = parametroSwitchService.obtenerValorTexto(CodigoParametroSwitch.CUENTA_INGRESOS_COMISION);
+        String cuentaIva = parametroSwitchService.obtenerValorTexto(CodigoParametroSwitch.CUENTA_IVA_RETENIDO);
+
         movimientos.add(ejecutarMovimiento(
                 ConceptoDetalleLiquidacion.DEBITO_CUENTA_MATRIZ,
                 loteProcesamiento.cuentaMatrizCargo(),
-                CuentaContableCore.INGRESOS_SERVICIOS_MASIVOS,
+                cuentaIngresos,
                 calculo.totalDebitado(),
                 uuidGrupoCore,
                 Boolean.TRUE
@@ -180,7 +188,7 @@ public class LiquidacionContableServiceImpl implements LiquidacionContableServic
         movimientos.add(ejecutarMovimiento(
                 ConceptoDetalleLiquidacion.CREDITO_INGRESOS,
                 loteProcesamiento.cuentaMatrizCargo(),
-                CuentaContableCore.INGRESOS_SERVICIOS_MASIVOS,
+                cuentaIngresos,
                 calculo.subtotalComision(),
                 uuidGrupoCore,
                 Boolean.TRUE
@@ -188,7 +196,7 @@ public class LiquidacionContableServiceImpl implements LiquidacionContableServic
         movimientos.add(ejecutarMovimiento(
                 ConceptoDetalleLiquidacion.CREDITO_IVA,
                 loteProcesamiento.cuentaMatrizCargo(),
-                CuentaContableCore.PASIVOS_IVA_RETENIDO,
+                cuentaIva,
                 calculo.montoIva(),
                 uuidGrupoCore,
                 Boolean.TRUE
