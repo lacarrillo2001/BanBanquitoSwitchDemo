@@ -13,6 +13,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
@@ -28,6 +30,25 @@ public class ArchivoPagoServiceImpl implements ArchivoPagoService {
     public ArchivoPagoParseadoInternalDto parsearArchivo(MultipartFile archivo) {
         validarArchivoRecibido(archivo);
         byte[] contenido = obtenerContenido(archivo);
+        return parsearContenido(contenido, archivo.getOriginalFilename(), archivo.getSize());
+    }
+
+    @Override
+    public ArchivoPagoParseadoInternalDto parsearArchivoDesdeRuta(Path ruta) {
+        validarRutaArchivo(ruta);
+        try {
+            byte[] contenido = Files.readAllBytes(ruta);
+            return parsearContenido(contenido, ruta.getFileName().toString(), Files.size(ruta));
+        } catch (IOException exception) {
+            throw new SolicitudInvalidaException(
+                    "ARCHIVO_SFTP_NO_LEGIBLE",
+                    "No fue posible leer el archivo desde la ruta: " + ruta,
+                    exception
+            );
+        }
+    }
+
+    private ArchivoPagoParseadoInternalDto parsearContenido(byte[] contenido, String nombreArchivo, Long tamano) {
         String textoArchivo = new String(contenido, StandardCharsets.UTF_8);
         String hashArchivo = calcularHashSha256(contenido);
 
@@ -58,20 +79,31 @@ public class ArchivoPagoServiceImpl implements ArchivoPagoService {
         }
 
         return new ArchivoPagoParseadoInternalDto(
-                archivo.getOriginalFilename(),
+                nombreArchivo,
                 hashArchivo,
-                archivo.getSize(),
+                tamano,
                 cabecera,
                 detalles,
                 pie
         );
     }
 
+    private void validarRutaArchivo(Path ruta) {
+        if (ruta == null || !Files.exists(ruta)) {
+            throw new SolicitudInvalidaException("ARCHIVO_NO_ENCONTRADO", "El archivo en la ruta especificada no existe.");
+        }
+        String nombreArchivo = ruta.getFileName().toString();
+        validarNombreYFormato(nombreArchivo);
+    }
+
     private void validarArchivoRecibido(MultipartFile archivo) {
         if (archivo == null || archivo.isEmpty()) {
             throw new SolicitudInvalidaException("ARCHIVO_REQUERIDO", "El archivo de pagos es obligatorio.");
         }
-        String nombreArchivo = archivo.getOriginalFilename();
+        validarNombreYFormato(archivo.getOriginalFilename());
+    }
+
+    private void validarNombreYFormato(String nombreArchivo) {
         if (nombreArchivo == null || nombreArchivo.isBlank()) {
             throw new SolicitudInvalidaException("NOMBRE_ARCHIVO_REQUERIDO", "El archivo debe tener nombre.");
         }
