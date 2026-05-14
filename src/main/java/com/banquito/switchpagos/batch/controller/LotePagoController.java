@@ -53,6 +53,7 @@ public class LotePagoController {
                                            @RequestParam(value = "rucEmpresa", required = false) String rucEmpresa) {
         RegistroLoteInternalDto registroLoteInternalDto = new RegistroLoteInternalDto(
                 archivo,
+                null,
                 tipoServicio,
                 cuentaMatrizCargo,
                 canalIngreso,

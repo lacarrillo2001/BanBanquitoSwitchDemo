@@ -115,7 +115,12 @@ public class LotePagoServiceImpl implements LotePagoService {
     @Override
     @Transactional
     public CargaLoteResponse registrarLote(RegistroLoteInternalDto registroLoteInternalDto) {
-        ArchivoPagoParseadoInternalDto archivoPagoParseado = archivoPagoService.parsearArchivo(registroLoteInternalDto.archivo());
+        ArchivoPagoParseadoInternalDto archivoPagoParseado;
+        if (registroLoteInternalDto.rutaArchivo() != null) {
+            archivoPagoParseado = archivoPagoService.parsearArchivoDesdeRuta(registroLoteInternalDto.rutaArchivo());
+        } else {
+            archivoPagoParseado = archivoPagoService.parsearArchivo(registroLoteInternalDto.archivo());
+        }
         ResultadoValidacionArchivoInternalDto resultadoValidacion = validadorArchivoPagoService.validarEstructura(archivoPagoParseado);
         if (!resultadoValidacion.valido()) {
             ErrorValidacionArchivoInternalDto primerError = resultadoValidacion.errores().getFirst();
