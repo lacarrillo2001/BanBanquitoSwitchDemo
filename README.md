@@ -16,7 +16,7 @@ Backend Spring Boot organizado como monolito modular para el Switch de Pagos Mas
 ```text
 H,1790012345001,NOM,2026-04-20T10:30:00-05:00,0010001234567890,2,1500.00
 D,1,0912345678,Juan Perez,0020009876543210,1000.00,Sueldo Abril,juan@correo.com
-D,2,0922222222,Maria Lopez,0020009876543220,500.00,Sueldo Abril,maria@correo.com
+D,2,0922222222,Maria Lopez,0020009876543220,500.00,Ssueldo Abril,maria@correo.com
 T,ABC123HASH,2,1500.00
 ```
 
