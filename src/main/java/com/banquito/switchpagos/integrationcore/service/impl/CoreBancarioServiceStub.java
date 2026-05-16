@@ -26,9 +26,12 @@ public class CoreBancarioServiceStub implements CoreBancarioService {
 
     private static final BigDecimal SALDO_DISPONIBLE_SIMULADO = new BigDecimal("100000.00");
     private final CoreBancarioMapper coreBancarioMapper;
+    private final com.banquito.switchpagos.integrationcore.config.CoreBancarioProperties coreBancarioProperties;
 
-    public CoreBancarioServiceStub(CoreBancarioMapper coreBancarioMapper) {
+    public CoreBancarioServiceStub(CoreBancarioMapper coreBancarioMapper,
+                                   com.banquito.switchpagos.integrationcore.config.CoreBancarioProperties coreBancarioProperties) {
         this.coreBancarioMapper = coreBancarioMapper;
+        this.coreBancarioProperties = coreBancarioProperties;
     }
 
     @Override
@@ -40,7 +43,7 @@ public class CoreBancarioServiceStub implements CoreBancarioService {
                 credencialesValidas ? "EMPRESA" : null,
                 credencialesValidas ? 1 : null,
                 credencialesValidas ? 501 : null,
-                credencialesValidas ? "1790000001001" : null,
+                credencialesValidas ? coreBancarioProperties.getIntegration().getMockRucEmpresa() : null,
                 usuario,
                 credencialesValidas ? "Empresa simulada" : null,
                 credencialesValidas ? "EMPRESA_PAGOS_MASIVOS" : null,
@@ -72,7 +75,7 @@ public class CoreBancarioServiceStub implements CoreBancarioService {
         return new CuentaFavoritaPagosCoreResponse(
                 ruc,
                 Boolean.TRUE,
-                "0010000000001",
+                coreBancarioProperties.getIntegration().getMockCuentaFavoritaPagosNumero(),
                 "ACTIVA",
                 Boolean.TRUE,
                 SALDO_DISPONIBLE_SIMULADO,

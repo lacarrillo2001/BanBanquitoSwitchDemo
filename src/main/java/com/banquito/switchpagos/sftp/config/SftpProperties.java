@@ -7,13 +7,13 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "switch.sftp")
 public class SftpProperties {
 
-    private Boolean enabled = true;
-    private String host = "0.0.0.0";
-    private Integer port = 2222;
-    private String rootDirectory = "sftp-inbox";
-    private Long scanFixedDelayMs = 10000L;
-    private Long fileSettleMs = 3000L;
-    private Boolean failOnStartError = false;
+    private Boolean enabled;
+    private String host;
+    private Integer port;
+    private String rootDirectory;
+    private Long scanFixedDelayMs;
+    private Long fileSettleMs;
+    private Boolean failOnStartError;
 
     public Boolean getEnabled() {
         return enabled;

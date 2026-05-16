@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 @ConfigurationProperties(prefix = "core")
 public class CoreBancarioProperties {
 
-    private String baseUrl = "http://localhost:8081";
+    private String baseUrl;
     private Integration integration = new Integration();
 
     public String getBaseUrl() {
@@ -29,18 +29,18 @@ public class CoreBancarioProperties {
     }
 
     public static class Integration {
-        private String mode = "rest";
-        private String codigoSubtipoPagoMasivo = "PAGO_MASIVO";
-        private String codigoCuentaIngresos = "INGRESOS_SERVICIOS_MASIVOS";
-        private String codigoCuentaIva = "IVA_SERVICIOS_MASIVOS";
-        private String numeroCuentaIngresos = "9000000001";
-        private String numeroCuentaIva = "9000000002";
-        private Boolean mockAutenticacion = true;
-        private Boolean mockCuentaFavoritaPagos = true;
-        private String mockUsuarioEmpresa = "empresa001";
-        private String mockRucEmpresa = "1790000001001";
-        private String mockCuentaFavoritaPagosNumero = "0010000000001";
-        private BigDecimal mockCuentaFavoritaPagosSaldoDisponible = new BigDecimal("252.75");
+        private String mode;
+        private String codigoSubtipoPagoMasivo;
+        private String codigoCuentaIngresos;
+        private String codigoCuentaIva;
+        private String numeroCuentaIngresos;
+        private String numeroCuentaIva;
+        private Boolean mockAutenticacion;
+        private Boolean mockCuentaFavoritaPagos;
+        private String mockUsuarioEmpresa;
+        private String mockRucEmpresa;
+        private String mockCuentaFavoritaPagosNumero;
+        private BigDecimal mockCuentaFavoritaPagosSaldoDisponible;
 
         public String getMode() {
             return mode;
