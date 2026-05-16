@@ -21,16 +21,16 @@ import java.util.Collections;
 @Component
 public class SftpServerConfig {
 
-    @Value("${sftp.port:2222}")
+    @Value("${sftp.port}")
     private int port;
 
-    @Value("${sftp.root-path:./sftp-data}")
+    @Value("${sftp.root-path}")
     private String rootPath;
 
-    @Value("${sftp.username:banquito}")
+    @Value("${sftp.username}")
     private String username;
 
-    @Value("${sftp.password:banquito123}")
+    @Value("${sftp.password}")
     private String password;
 
     private SshServer sshd;

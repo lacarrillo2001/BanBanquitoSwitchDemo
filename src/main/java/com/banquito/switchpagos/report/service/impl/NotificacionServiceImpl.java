@@ -17,6 +17,7 @@ import com.banquito.switchpagos.report.service.NotificacionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.persistence.EntityManager;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ public class NotificacionServiceImpl implements NotificacionService {
     private final EntityManager entityManager;
     private final NotificacionBeneficiarioMapper notificacionBeneficiarioMapper;
     private final JavaMailSender mailSender;
+    private final String remitenteNotificaciones;
 
     public NotificacionServiceImpl(NotificacionBeneficiarioRepository notificacionBeneficiarioRepository,
                                    LineaPagoService lineaPagoService,
@@ -48,7 +50,8 @@ public class NotificacionServiceImpl implements NotificacionService {
                                    ObjectMapper objectMapper,
                                    EntityManager entityManager,
                                    NotificacionBeneficiarioMapper notificacionBeneficiarioMapper,
-                                   JavaMailSender mailSender) {
+                                   JavaMailSender mailSender,
+                                   @Value("${spring.mail.from}") String remitenteNotificaciones) {
         this.notificacionBeneficiarioRepository = notificacionBeneficiarioRepository;
         this.lineaPagoService = lineaPagoService;
         this.lotePagoService = lotePagoService;
@@ -57,6 +60,7 @@ public class NotificacionServiceImpl implements NotificacionService {
         this.entityManager = entityManager;
         this.notificacionBeneficiarioMapper = notificacionBeneficiarioMapper;
         this.mailSender = mailSender;
+        this.remitenteNotificaciones = remitenteNotificaciones;
     }
 
     @Override
@@ -101,7 +105,7 @@ public class NotificacionServiceImpl implements NotificacionService {
             message.setTo(notificacion.getCorreoDestino());
             message.setSubject(notificacion.getAsunto());
             message.setText("Notificacion de Pago BanQuito: " + notificacion.getContenido().toString());
-            message.setFrom("notificaciones@banquito.com");
+            message.setFrom(remitenteNotificaciones);
 
             mailSender.send(message);
 
