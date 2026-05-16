@@ -1,0 +1,497 @@
+{
+  "info": {
+    "_postman_id": "4c99ecf7-f88c-4a93-bd5d-b74b733c4ef5",
+    "name": "Switch Pagos Masivos Banco BanQuito - Flujo Notificaciones SMTP",
+    "description": "Coleccion enfocada en ejecutar un flujo completo de lote valido hasta el envio de notificaciones SMTP. Usa el archivo postman/examples/lote_valido.csv y termina validando la aparicion del mensaje en Mailpit.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.request.headers.upsert({ key: 'Accept', value: 'application/json' });"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "apiBase",
+      "value": "{{baseUrl}}/api/v1/pagos-masivos"
+    },
+    {
+      "key": "usuario",
+      "value": "empresa001"
+    },
+    {
+      "key": "contrasena",
+      "value": "Banquito123*"
+    },
+    {
+      "key": "tipoServicio",
+      "value": "NOM"
+    },
+    {
+      "key": "cuentaMatrizCargo",
+      "value": "0010000000601"
+    },
+    {
+      "key": "canalIngreso",
+      "value": "PORTAL_WEB"
+    },
+    {
+      "key": "usernameCredencialWebCore",
+      "value": "empresa001"
+    },
+    {
+      "key": "rucEmpresa",
+      "value": "1790000001001"
+    },
+    {
+      "key": "uuidLote",
+      "value": ""
+    },
+    {
+      "key": "mailpitMessageId",
+      "value": ""
+    },
+    {
+      "key": "emailNotificacionEsperado",
+      "value": "carlos.ruiz@correo.com"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Login switch",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"usuario\": \"{{usuario}}\",\n  \"contrasena\": \"{{contrasena}}\"\n}"
+        },
+        "url": {
+          "raw": "{{apiBase}}/auth/login",
+          "host": [
+            "{{apiBase}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Login responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Login devuelve JSON', function () { pm.response.to.be.json; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Cargar lote valido",
+      "request": {
+        "method": "POST",
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "archivo",
+              "type": "file",
+              "src": "postman/examples/lote_valido.csv"
+            },
+            {
+              "key": "tipoServicio",
+              "type": "text",
+              "value": "{{tipoServicio}}"
+            },
+            {
+              "key": "cuentaMatrizCargo",
+              "type": "text",
+              "value": "{{cuentaMatrizCargo}}"
+            },
+            {
+              "key": "canalIngreso",
+              "type": "text",
+              "value": "{{canalIngreso}}"
+            },
+            {
+              "key": "usernameCredencialWebCore",
+              "type": "text",
+              "value": "{{usernameCredencialWebCore}}"
+            },
+            {
+              "key": "rucEmpresa",
+              "type": "text",
+              "value": "{{rucEmpresa}}"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{apiBase}}/lotes",
+          "host": [
+            "{{apiBase}}"
+          ],
+          "path": [
+            "lotes"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Carga responde 201 o 200', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+              "var json = pm.response.json();",
+              "pm.test('Carga devuelve uuidLote', function () { pm.expect(json.uuidLote).to.exist; });",
+              "if (json.uuidLote) { pm.collectionVariables.set('uuidLote', json.uuidLote); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Consultar estado lote",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{apiBase}}/lotes/{{uuidLote}}/estado",
+          "host": [
+            "{{apiBase}}"
+          ],
+          "path": [
+            "lotes",
+            "{{uuidLote}}",
+            "estado"
+          ]
+        }
+      }
+    },
+    {
+      "name": "04 - Validar lote",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{apiBase}}/lotes/{{uuidLote}}/validar",
+          "host": [
+            "{{apiBase}}"
+          ],
+          "path": [
+            "lotes",
+            "{{uuidLote}}",
+            "validar"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Validacion responde 200', function () { pm.response.to.have.status(200); });",
+              "var json = pm.response.json();",
+              "pm.test('Lote valido', function () { pm.expect(json.valido).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Procesar lote",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ejecutadoPor\": \"POSTMAN\",\n  \"observacion\": \"Procesamiento completo para validar notificaciones SMTP\"\n}"
+        },
+        "url": {
+          "raw": "{{apiBase}}/lotes/{{uuidLote}}/procesar",
+          "host": [
+            "{{apiBase}}"
+          ],
+          "path": [
+            "lotes",
+            "{{uuidLote}}",
+            "procesar"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Procesamiento responde 200', function () { pm.response.to.have.status(200); });",
+              "var json = pm.response.json();",
+              "pm.test('Lote procesado con exito total o parcial', function () { pm.expect(['PROCESADO_TOTAL', 'PROCESADO_PARCIAL']).to.include(json.estado); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Consultar lineas del lote",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{apiBase}}/lotes/{{uuidLote}}/lineas?page=0&size=20",
+          "host": [
+            "{{apiBase}}"
+          ],
+          "path": [
+            "lotes",
+            "{{uuidLote}}",
+            "lineas"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "20"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "07 - Liquidar lote",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{apiBase}}/lotes/{{uuidLote}}/liquidar",
+          "host": [
+            "{{apiBase}}"
+          ],
+          "path": [
+            "lotes",
+            "{{uuidLote}}",
+            "liquidar"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Liquidacion responde 200', function () { pm.response.to.have.status(200); });",
+              "var json = pm.response.json();",
+              "pm.test('Existe siguienteAccion o estadoLiquidacion', function () { pm.expect(json.estadoLiquidacion).to.exist; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Confirmar estado CERRADO",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{apiBase}}/lotes/{{uuidLote}}/estado",
+          "host": [
+            "{{apiBase}}"
+          ],
+          "path": [
+            "lotes",
+            "{{uuidLote}}",
+            "estado"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Estado responde 200', function () { pm.response.to.have.status(200); });",
+              "var json = pm.response.json();",
+              "pm.test('Lote cerrado', function () { pm.expect(json.estado).to.eql('CERRADO'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - Generar reporte de novedades y disparar notificaciones",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{apiBase}}/lotes/{{uuidLote}}/novedades?formato=JSON",
+          "host": [
+            "{{apiBase}}"
+          ],
+          "path": [
+            "lotes",
+            "{{uuidLote}}",
+            "novedades"
+          ],
+          "query": [
+            {
+              "key": "formato",
+              "value": "JSON"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Reporte novedades responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Reporte devuelve lineas', function () { var json = pm.response.json(); pm.expect(json.lineas).to.exist; pm.expect(json.lineas.length).to.be.above(0); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 - Estado notificaciones DB",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/report/notifications/db-status",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "report",
+            "notifications",
+            "db-status"
+          ]
+        }
+      }
+    },
+    {
+      "name": "11 - Listar mensajes Mailpit",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/report/notifications/mailpit/messages",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "report",
+            "notifications",
+            "mailpit",
+            "messages"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Mailpit responde 200', function () { pm.response.to.have.status(200); });",
+              "var json = pm.response.json();",
+              "var esperado = pm.collectionVariables.get('emailNotificacionEsperado');",
+              "var mensajes = json.messages || [];",
+              "var encontrado = mensajes.find(function (mensaje) {",
+              "  return Array.isArray(mensaje.To) && mensaje.To.some(function (destino) { return destino.Address === esperado; });",
+              "});",
+              "pm.test('Existe mensaje para el destinatario esperado', function () { pm.expect(encontrado, 'No se encontro mensaje para ' + esperado).to.exist; });",
+              "if (encontrado && encontrado.ID) { pm.collectionVariables.set('mailpitMessageId', encontrado.ID); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 - Ver detalle del mensaje Mailpit",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/report/notifications/mailpit/messages/{{mailpitMessageId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "report",
+            "notifications",
+            "mailpit",
+            "messages",
+            "{{mailpitMessageId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Detalle Mailpit responde 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 - Enviar correo de prueba directo",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/report/notifications/test-email?email={{emailNotificacionEsperado}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "report",
+            "notifications",
+            "test-email"
+          ],
+          "query": [
+            {
+              "key": "email",
+              "value": "{{emailNotificacionEsperado}}"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

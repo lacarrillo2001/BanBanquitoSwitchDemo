@@ -11,4 +11,8 @@ public interface NotificacionService {
     void registrarNotificacionLineaExitosa(LineaPagoInternalDto lineaPagoInternalDto, String rucEmpresa);
 
     void enviarNotificacionesPendientes();
+
+    void enviarEmailPruebaDirecto(String destinatario, String asunto, String cuerpo);
+
+    String obtenerResumenDb();
 }
