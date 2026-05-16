@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "8e2a7b73-8f91-4c08-a6ef-switch-banquito",
-    "name": "Switch Pagos Masivos Banco BanQuito",
-    "description": "Coleccion para probar el flujo funcional completo del backend Switch de Pagos Masivos Banco BanQuito. Los archivos multipart deben seleccionarse manualmente en Postman si el import no conserva la ruta local.",
+    "name": "Switch Pagos Masivos Banco BanQuito - Cobertura Exhaustiva",
+    "description": "Coleccion ampliada para probar el flujo funcional completo del backend Switch de Pagos Masivos Banco BanQuito.\nCobertura principal: RF-01 horarios, RF-02 validacion estructural y duplicidad, RF-03 procesamiento linea por linea, RF-04 resiliencia del lote, RF-05 notificaciones, RF-06 tarifaje, RF-07 liquidacion y RF-08 reportes.\nEjecutar preferiblemente sobre una BD limpia o con archivos que no hayan sido cargados previamente. Los archivos multipart deben seleccionarse manualmente en Postman si el import no conserva la ruta local.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -66,6 +66,50 @@
     {
       "key": "cuentaMatrizCargo",
       "value": "0010001234567890"
+    },
+    {
+      "key": "uuidLoteCuentaInexistente",
+      "value": ""
+    },
+    {
+      "key": "uuidLoteCuentaBloqueada",
+      "value": ""
+    },
+    {
+      "key": "uuidLoteSaldoInsuficiente",
+      "value": ""
+    },
+    {
+      "key": "uuidLoteLimite",
+      "value": ""
+    },
+    {
+      "key": "uuidLoteMinimo",
+      "value": ""
+    },
+    {
+      "key": "uuidLoteMixto",
+      "value": ""
+    },
+    {
+      "key": "uuidLoteSinExitosas",
+      "value": ""
+    },
+    {
+      "key": "uuidLoteTxt",
+      "value": ""
+    },
+    {
+      "key": "uuidLotePrv",
+      "value": ""
+    },
+    {
+      "key": "uuidLoteAnulacion",
+      "value": ""
+    },
+    {
+      "key": "tipoServicioPrv",
+      "value": "PRV"
     }
   ],
   "item": [
@@ -158,6 +202,76 @@
                 "exec": [
                   "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
                   "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Tarifas PRV",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBase}}/tarifas?tipoServicio={{tipoServicioPrv}}",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "tarifas"
+              ],
+              "query": [
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicioPrv}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Tiene rangos PRV', function () { const json = pm.response.json(); pm.expect(json.tipoServicio).to.eql('PRV'); pm.expect(json.rangos.length).to.be.above(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Tarifas tipo inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBase}}/tarifas?tipoServicio=XYZ",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "tarifas"
+              ],
+              "query": [
+                {
+                  "key": "tipoServicio",
+                  "value": "XYZ"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Sin tarifas para tipo inexistente', function () { const json = pm.response.json(); pm.expect(json).to.be.an('array').that.is.empty; });"
                 ]
               }
             }
@@ -566,6 +680,104 @@
               }
             }
           ]
+        },
+        {
+          "name": "GET Listar lotes por estado CERRADO",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBase}}/lotes?rucEmpresa={{rucEmpresa}}&estado=CERRADO&page=0&size=10",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": [
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}"
+                },
+                {
+                  "key": "estado",
+                  "value": "CERRADO"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Filtro por estado sin error', function () { const json = pm.response.json(); pm.expect(json.contenido).to.exist; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Listar lotes por rango de fechas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBase}}/lotes?rucEmpresa={{rucEmpresa}}&fechaDesde=2026-01-01T00:00:00-05:00&fechaHasta=2026-12-31T23:59:59-05:00&page=0&size=20",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": [
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}"
+                },
+                {
+                  "key": "fechaDesde",
+                  "value": "2026-01-01T00:00:00-05:00"
+                },
+                {
+                  "key": "fechaHasta",
+                  "value": "2026-12-31T23:59:59-05:00"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Filtro por fechas sin error SQL', function () { const json = pm.response.json(); pm.expect(json.contenido).to.exist; });"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -673,7 +885,7 @@
                 {
                   "key": "archivo",
                   "type": "file",
-                  "src": "postman/examples/lote_valido.pdf",
+                  "src": "postman/examples/lote_formato_no_soportado.pdf",
                   "description": "Seleccione manualmente cualquier archivo con extension distinta a .csv o .txt."
                 },
                 {
@@ -781,10 +993,10 @@
       ]
     },
     {
-      "name": "Procesamiento con errores por linea",
+      "name": "Procesamiento con errores por linea - cobertura RF-03/RF-04",
       "item": [
         {
-          "name": "POST Cargar lote con cuenta destino inexistente",
+          "name": "POST Cargar lote cuenta destino inexistente",
           "request": {
             "method": "POST",
             "header": [],
@@ -794,7 +1006,8 @@
                 {
                   "key": "archivo",
                   "type": "file",
-                  "src": "postman/examples/lote_error_cuenta_inexistente.csv"
+                  "src": "postman/examples/lote_error_cuenta_inexistente.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_error_cuenta_inexistente.csv si Postman no conserva la ruta."
                 },
                 {
                   "key": "tipoServicio",
@@ -815,6 +1028,11 @@
                   "key": "rucEmpresa",
                   "value": "{{rucEmpresa}}",
                   "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
                 }
               ]
             },
@@ -825,7 +1043,8 @@
               ],
               "path": [
                 "lotes"
-              ]
+              ],
+              "query": []
             }
           },
           "event": [
@@ -835,44 +1054,15 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
-                  "const json = pm.response.json(); pm.collectionVariables.set('uuidLoteErrorLinea', json.uuidLote);"
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Guarda uuidLoteCuentaInexistente', function () { const json = pm.response.json(); pm.expect(json.uuidLote).to.exist; pm.collectionVariables.set('uuidLoteCuentaInexistente', json.uuidLote); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "POST Validar lote con error de linea",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{apiBase}}/lotes/{{uuidLoteErrorLinea}}/validar",
-              "host": [
-                "{{apiBase}}"
-              ],
-              "path": [
-                "lotes",
-                "{{uuidLoteErrorLinea}}",
-                "validar"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-                  "pm.test('Estado VALIDADO', function () { const json = pm.response.json(); pm.expect(json.estado).to.eql('VALIDADO'); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "POST Procesar lote con error de linea",
+          "name": "POST Validar lote cuenta destino inexistente",
           "request": {
             "method": "POST",
             "header": [
@@ -883,18 +1073,19 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"ejecutadoPor\": \"SISTEMA\",\n  \"observacion\": \"Procesamiento con error controlado de linea\"\n}"
+              "raw": ""
             },
             "url": {
-              "raw": "{{apiBase}}/lotes/{{uuidLoteErrorLinea}}/procesar",
+              "raw": "{{apiBase}}/lotes/{{uuidLoteCuentaInexistente}}/validar",
               "host": [
                 "{{apiBase}}"
               ],
               "path": [
                 "lotes",
-                "{{uuidLoteErrorLinea}}",
-                "procesar"
-              ]
+                "{{uuidLoteCuentaInexistente}}",
+                "validar"
+              ],
+              "query": []
             }
           },
           "event": [
@@ -904,25 +1095,72 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-                  "pm.test('Procesado parcial con rechazos', function () { const json = pm.response.json(); pm.expect(json.estado).to.eql('PROCESADO_PARCIAL'); pm.expect(json.resultado.rechazadas).to.be.at.least(1); });"
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Lote validado', function () { const json = pm.response.json(); pm.expect(json.estado).to.eql('VALIDADO'); pm.expect(json.valido).to.eql(true); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "GET Lineas rechazadas del lote con error",
+          "name": "POST Procesar lote cuenta destino inexistente",
           "request": {
-            "method": "GET",
-            "header": [],
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ejecutadoPor\": \"SISTEMA\",\n  \"observacion\": \"Prueba desde Postman\"\n}"
+            },
             "url": {
-              "raw": "{{apiBase}}/lotes/{{uuidLoteErrorLinea}}/lineas?estado=RECHAZADA&page=0&size=20",
+              "raw": "{{apiBase}}/lotes/{{uuidLoteCuentaInexistente}}/procesar",
               "host": [
                 "{{apiBase}}"
               ],
               "path": [
                 "lotes",
-                "{{uuidLoteErrorLinea}}",
+                "{{uuidLoteCuentaInexistente}}",
+                "procesar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "const json = pm.response.json();",
+                  "pm.test('Estado PROCESADO_PARCIAL', function () { pm.expect(json.estado).to.eql('PROCESADO_PARCIAL'); });",
+                  "pm.test('resultado.totalLineas = 2', function () { pm.expect(json.resultado.totalLineas).to.eql(2); });",
+                  "pm.test('resultado.exitosas = 1', function () { pm.expect(json.resultado.exitosas).to.eql(1); });",
+                  "pm.test('resultado.rechazadas = 1', function () { pm.expect(json.resultado.rechazadas).to.eql(1); });",
+                  "pm.test('resultado.fallidas = 0', function () { pm.expect(json.resultado.fallidas).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Lineas rechazadas cuenta destino inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteCuentaInexistente}}/lineas?estado=RECHAZADA&page=0&size=20",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteCuentaInexistente}}",
                 "lineas"
               ],
               "query": [
@@ -948,7 +1186,1414 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-                  "pm.test('Al menos una linea con codigoError', function () { const json = pm.response.json(); const lineas = json.contenido || json.content || []; pm.expect(lineas.length).to.be.at.least(1); pm.expect(lineas[0].codigoError).to.exist; });"
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "const json = pm.response.json();",
+                  "const contenido = json.contenido || json.content || [];",
+                  "pm.test('Hay lineas rechazadas', function () { pm.expect(contenido.length).to.be.at.least(1); });",
+                  "pm.test('Incluye CUENTA_DESTINO_NO_EXISTE', function () { const codes = contenido.map(l => l.codigoError); pm.expect(codes).to.include('CUENTA_DESTINO_NO_EXISTE'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Liquidar lote parcial cuenta inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteCuentaInexistente}}/liquidar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteCuentaInexistente}}",
+                "liquidar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Liquida solo exitosas', function () { const json = pm.response.json(); pm.expect(json.estadoLiquidacion).to.eql('COMPLETADO'); pm.expect(json.transaccionesExitosas).to.eql(1); pm.expect(json.transaccionesFallidas).to.eql(1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar lote cuenta destino bloqueada",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_error_cuenta_bloqueada.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_error_cuenta_bloqueada.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Guarda uuidLoteCuentaBloqueada', function () { const json = pm.response.json(); pm.expect(json.uuidLote).to.exist; pm.collectionVariables.set('uuidLoteCuentaBloqueada', json.uuidLote); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Validar lote cuenta destino bloqueada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteCuentaBloqueada}}/validar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteCuentaBloqueada}}",
+                "validar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Lote validado', function () { const json = pm.response.json(); pm.expect(json.estado).to.eql('VALIDADO'); pm.expect(json.valido).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Procesar lote cuenta destino bloqueada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ejecutadoPor\": \"SISTEMA\",\n  \"observacion\": \"Prueba desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteCuentaBloqueada}}/procesar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteCuentaBloqueada}}",
+                "procesar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "const json = pm.response.json();",
+                  "pm.test('Estado PROCESADO_PARCIAL', function () { pm.expect(json.estado).to.eql('PROCESADO_PARCIAL'); });",
+                  "pm.test('resultado.totalLineas = 2', function () { pm.expect(json.resultado.totalLineas).to.eql(2); });",
+                  "pm.test('resultado.exitosas = 1', function () { pm.expect(json.resultado.exitosas).to.eql(1); });",
+                  "pm.test('resultado.rechazadas = 1', function () { pm.expect(json.resultado.rechazadas).to.eql(1); });",
+                  "pm.test('resultado.fallidas = 0', function () { pm.expect(json.resultado.fallidas).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Lineas rechazadas cuenta destino bloqueada",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteCuentaBloqueada}}/lineas?estado=RECHAZADA&page=0&size=20",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteCuentaBloqueada}}",
+                "lineas"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "RECHAZADA"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "const json = pm.response.json();",
+                  "const contenido = json.contenido || json.content || [];",
+                  "pm.test('Hay lineas rechazadas', function () { pm.expect(contenido.length).to.be.at.least(1); });",
+                  "pm.test('Incluye CUENTA_DESTINO_BLOQUEADA', function () { const codes = contenido.map(l => l.codigoError); pm.expect(codes).to.include('CUENTA_DESTINO_BLOQUEADA'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Liquidar lote parcial cuenta bloqueada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteCuentaBloqueada}}/liquidar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteCuentaBloqueada}}",
+                "liquidar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Liquidacion completada', function () { const json = pm.response.json(); pm.expect(json.estadoLiquidacion).to.eql('COMPLETADO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar lote monto mayor a saldo",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_monto_mayor_saldo.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_monto_mayor_saldo.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Guarda uuidLoteSaldoInsuficiente', function () { const json = pm.response.json(); pm.expect(json.uuidLote).to.exist; pm.collectionVariables.set('uuidLoteSaldoInsuficiente', json.uuidLote); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Validar lote monto mayor a saldo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteSaldoInsuficiente}}/validar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteSaldoInsuficiente}}",
+                "validar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Lote validado', function () { const json = pm.response.json(); pm.expect(json.estado).to.eql('VALIDADO'); pm.expect(json.valido).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Procesar lote saldo insuficiente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ejecutadoPor\": \"SISTEMA\",\n  \"observacion\": \"Prueba desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteSaldoInsuficiente}}/procesar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteSaldoInsuficiente}}",
+                "procesar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "const json = pm.response.json();",
+                  "pm.test('Estado PROCESADO_PARCIAL', function () { pm.expect(json.estado).to.eql('PROCESADO_PARCIAL'); });",
+                  "pm.test('resultado.totalLineas = 1', function () { pm.expect(json.resultado.totalLineas).to.eql(1); });",
+                  "pm.test('resultado.exitosas = 0', function () { pm.expect(json.resultado.exitosas).to.eql(0); });",
+                  "pm.test('resultado.rechazadas = 1', function () { pm.expect(json.resultado.rechazadas).to.eql(1); });",
+                  "pm.test('resultado.fallidas = 0', function () { pm.expect(json.resultado.fallidas).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Lineas rechazadas saldo insuficiente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteSaldoInsuficiente}}/lineas?estado=RECHAZADA&page=0&size=20",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteSaldoInsuficiente}}",
+                "lineas"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "RECHAZADA"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "const json = pm.response.json();",
+                  "const contenido = json.contenido || json.content || [];",
+                  "pm.test('Hay lineas rechazadas', function () { pm.expect(contenido.length).to.be.at.least(1); });",
+                  "pm.test('Incluye SALDO_INSUFICIENTE', function () { const codes = contenido.map(l => l.codigoError); pm.expect(codes).to.include('SALDO_INSUFICIENTE'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Liquidar lote sin exitosas por saldo insuficiente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteSaldoInsuficiente}}/liquidar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteSaldoInsuficiente}}",
+                "liquidar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo SIN_TRANSACCIONES_EXITOSAS', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('SIN_TRANSACCIONES_EXITOSAS'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar lote monto supera limite",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_error_monto_supera_limite.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_error_monto_supera_limite.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Guarda uuidLoteLimite', function () { const json = pm.response.json(); pm.expect(json.uuidLote).to.exist; pm.collectionVariables.set('uuidLoteLimite', json.uuidLote); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Validar lote monto supera limite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteLimite}}/validar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteLimite}}",
+                "validar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Lote validado', function () { const json = pm.response.json(); pm.expect(json.estado).to.eql('VALIDADO'); pm.expect(json.valido).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Procesar lote monto supera limite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ejecutadoPor\": \"SISTEMA\",\n  \"observacion\": \"Prueba desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteLimite}}/procesar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteLimite}}",
+                "procesar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "const json = pm.response.json();",
+                  "pm.test('Estado PROCESADO_PARCIAL', function () { pm.expect(json.estado).to.eql('PROCESADO_PARCIAL'); });",
+                  "pm.test('resultado.totalLineas = 1', function () { pm.expect(json.resultado.totalLineas).to.eql(1); });",
+                  "pm.test('resultado.exitosas = 0', function () { pm.expect(json.resultado.exitosas).to.eql(0); });",
+                  "pm.test('resultado.rechazadas = 1', function () { pm.expect(json.resultado.rechazadas).to.eql(1); });",
+                  "pm.test('resultado.fallidas = 0', function () { pm.expect(json.resultado.fallidas).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Lineas rechazadas monto supera limite",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteLimite}}/lineas?estado=RECHAZADA&page=0&size=20",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteLimite}}",
+                "lineas"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "RECHAZADA"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "const json = pm.response.json();",
+                  "const contenido = json.contenido || json.content || [];",
+                  "pm.test('Hay lineas rechazadas', function () { pm.expect(contenido.length).to.be.at.least(1); });",
+                  "pm.test('Incluye MONTO_SUPERA_LIMITE', function () { const codes = contenido.map(l => l.codigoError); pm.expect(codes).to.include('MONTO_SUPERA_LIMITE'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar lote monto menor al minimo",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_error_monto_menor_minimo.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_error_monto_menor_minimo.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Guarda uuidLoteMinimo', function () { const json = pm.response.json(); pm.expect(json.uuidLote).to.exist; pm.collectionVariables.set('uuidLoteMinimo', json.uuidLote); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Validar lote monto menor al minimo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteMinimo}}/validar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteMinimo}}",
+                "validar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Lote validado', function () { const json = pm.response.json(); pm.expect(json.estado).to.eql('VALIDADO'); pm.expect(json.valido).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Procesar lote monto menor al minimo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ejecutadoPor\": \"SISTEMA\",\n  \"observacion\": \"Prueba desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteMinimo}}/procesar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteMinimo}}",
+                "procesar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "const json = pm.response.json();",
+                  "pm.test('Estado PROCESADO_PARCIAL', function () { pm.expect(json.estado).to.eql('PROCESADO_PARCIAL'); });",
+                  "pm.test('resultado.totalLineas = 1', function () { pm.expect(json.resultado.totalLineas).to.eql(1); });",
+                  "pm.test('resultado.exitosas = 0', function () { pm.expect(json.resultado.exitosas).to.eql(0); });",
+                  "pm.test('resultado.rechazadas = 1', function () { pm.expect(json.resultado.rechazadas).to.eql(1); });",
+                  "pm.test('resultado.fallidas = 0', function () { pm.expect(json.resultado.fallidas).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Lineas rechazadas monto menor al minimo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteMinimo}}/lineas?estado=RECHAZADA&page=0&size=20",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteMinimo}}",
+                "lineas"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "RECHAZADA"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "const json = pm.response.json();",
+                  "const contenido = json.contenido || json.content || [];",
+                  "pm.test('Hay lineas rechazadas', function () { pm.expect(contenido.length).to.be.at.least(1); });",
+                  "pm.test('Incluye MONTO_MENOR_AL_MINIMO', function () { const codes = contenido.map(l => l.codigoError); pm.expect(codes).to.include('MONTO_MENOR_AL_MINIMO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar lote mixto multiples errores",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_mixto_multiples_errores.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_mixto_multiples_errores.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Guarda uuidLoteMixto', function () { const json = pm.response.json(); pm.expect(json.uuidLote).to.exist; pm.collectionVariables.set('uuidLoteMixto', json.uuidLote); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Validar lote mixto multiples errores",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteMixto}}/validar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteMixto}}",
+                "validar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Lote validado', function () { const json = pm.response.json(); pm.expect(json.estado).to.eql('VALIDADO'); pm.expect(json.valido).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Procesar lote mixto multiples errores",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ejecutadoPor\": \"SISTEMA\",\n  \"observacion\": \"Prueba desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteMixto}}/procesar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteMixto}}",
+                "procesar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "const json = pm.response.json();",
+                  "pm.test('Estado PROCESADO_PARCIAL', function () { pm.expect(json.estado).to.eql('PROCESADO_PARCIAL'); });",
+                  "pm.test('resultado.totalLineas = 5', function () { pm.expect(json.resultado.totalLineas).to.eql(5); });",
+                  "pm.test('resultado.exitosas = 1', function () { pm.expect(json.resultado.exitosas).to.eql(1); });",
+                  "pm.test('resultado.rechazadas = 4', function () { pm.expect(json.resultado.rechazadas).to.eql(4); });",
+                  "pm.test('resultado.fallidas = 0', function () { pm.expect(json.resultado.fallidas).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Lineas rechazadas lote mixto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteMixto}}/lineas?estado=RECHAZADA&page=0&size=20",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteMixto}}",
+                "lineas"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "RECHAZADA"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "const json = pm.response.json();",
+                  "const contenido = json.contenido || json.content || [];",
+                  "pm.test('Hay lineas rechazadas', function () { pm.expect(contenido.length).to.be.at.least(1); });",
+                  "pm.test('Incluye CUENTA_DESTINO_NO_EXISTE', function () { const codes = contenido.map(l => l.codigoError); pm.expect(codes).to.include('CUENTA_DESTINO_NO_EXISTE'); });",
+                  "pm.test('Incluye CUENTA_DESTINO_BLOQUEADA', function () { const codes = contenido.map(l => l.codigoError); pm.expect(codes).to.include('CUENTA_DESTINO_BLOQUEADA'); });",
+                  "pm.test('Incluye SALDO_INSUFICIENTE', function () { const codes = contenido.map(l => l.codigoError); pm.expect(codes).to.include('SALDO_INSUFICIENTE'); });",
+                  "pm.test('Incluye MONTO_SUPERA_LIMITE', function () { const codes = contenido.map(l => l.codigoError); pm.expect(codes).to.include('MONTO_SUPERA_LIMITE'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Liquidar lote mixto con una exitosa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteMixto}}/liquidar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteMixto}}",
+                "liquidar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Liquida lote mixto', function () { const json = pm.response.json(); pm.expect(json.estadoLiquidacion).to.eql('COMPLETADO'); pm.expect(json.transaccionesExitosas).to.eql(1); pm.expect(json.transaccionesFallidas).to.eql(4); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Novedades lote mixto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteMixto}}/novedades?formato=JSON",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteMixto}}",
+                "novedades"
+              ],
+              "query": [
+                {
+                  "key": "formato",
+                  "value": "JSON"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Novedades reflejan exitosas y rechazadas', function () { const json = pm.response.json(); pm.expect(json.resumen.exitosas).to.eql(1); pm.expect(json.resumen.rechazadas).to.eql(4); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar lote todas lineas rechazadas",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_todas_lineas_rechazadas.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_todas_lineas_rechazadas.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Guarda uuidLoteSinExitosas', function () { const json = pm.response.json(); pm.expect(json.uuidLote).to.exist; pm.collectionVariables.set('uuidLoteSinExitosas', json.uuidLote); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Validar lote todas lineas rechazadas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteSinExitosas}}/validar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteSinExitosas}}",
+                "validar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Lote validado', function () { const json = pm.response.json(); pm.expect(json.estado).to.eql('VALIDADO'); pm.expect(json.valido).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Procesar lote todas lineas rechazadas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ejecutadoPor\": \"SISTEMA\",\n  \"observacion\": \"Prueba desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteSinExitosas}}/procesar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteSinExitosas}}",
+                "procesar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "const json = pm.response.json();",
+                  "pm.test('Estado PROCESADO_PARCIAL', function () { pm.expect(json.estado).to.eql('PROCESADO_PARCIAL'); });",
+                  "pm.test('resultado.totalLineas = 2', function () { pm.expect(json.resultado.totalLineas).to.eql(2); });",
+                  "pm.test('resultado.exitosas = 0', function () { pm.expect(json.resultado.exitosas).to.eql(0); });",
+                  "pm.test('resultado.rechazadas = 2', function () { pm.expect(json.resultado.rechazadas).to.eql(2); });",
+                  "pm.test('resultado.fallidas = 0', function () { pm.expect(json.resultado.fallidas).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Liquidar lote todas lineas rechazadas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteSinExitosas}}/liquidar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteSinExitosas}}",
+                "liquidar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo SIN_TRANSACCIONES_EXITOSAS', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('SIN_TRANSACCIONES_EXITOSAS'); });"
                 ]
               }
             }
@@ -1199,6 +2844,1547 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 409', function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Servicios y formatos soportados adicionales",
+      "item": [
+        {
+          "name": "POST Cargar lote valido TXT",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_valido_txt.txt",
+                  "description": "Seleccione manualmente postman/examples/lote_valido_txt.txt si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Guarda uuidLoteTxt', function () { const json = pm.response.json(); pm.expect(json.uuidLote).to.exist; pm.collectionVariables.set('uuidLoteTxt', json.uuidLote); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Validar lote TXT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteTxt}}/validar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteTxt}}",
+                "validar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Lote validado', function () { const json = pm.response.json(); pm.expect(json.estado).to.eql('VALIDADO'); pm.expect(json.valido).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Procesar lote TXT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ejecutadoPor\": \"SISTEMA\",\n  \"observacion\": \"Prueba desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteTxt}}/procesar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteTxt}}",
+                "procesar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('TXT procesado total', function () { const json = pm.response.json(); pm.expect(json.estado).to.eql('PROCESADO_TOTAL'); pm.expect(json.resultado.exitosas).to.eql(1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Liquidar lote TXT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteTxt}}/liquidar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteTxt}}",
+                "liquidar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Liquidacion completada', function () { const json = pm.response.json(); pm.expect(json.estadoLiquidacion).to.eql('COMPLETADO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar lote valido PRV",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_prv_valido.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_prv_valido.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicioPrv}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Guarda uuidLotePrv', function () { const json = pm.response.json(); pm.expect(json.uuidLote).to.exist; pm.collectionVariables.set('uuidLotePrv', json.uuidLote); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Validar lote PRV",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLotePrv}}/validar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLotePrv}}",
+                "validar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Lote validado', function () { const json = pm.response.json(); pm.expect(json.estado).to.eql('VALIDADO'); pm.expect(json.valido).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Procesar lote PRV",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ejecutadoPor\": \"SISTEMA\",\n  \"observacion\": \"Prueba desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLotePrv}}/procesar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLotePrv}}",
+                "procesar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('PRV procesado total', function () { const json = pm.response.json(); pm.expect(json.estado).to.eql('PROCESADO_TOTAL'); pm.expect(json.resultado.exitosas).to.eql(2); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Liquidar lote PRV",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLotePrv}}/liquidar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLotePrv}}",
+                "liquidar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Liquidacion completada', function () { const json = pm.response.json(); pm.expect(json.estadoLiquidacion).to.eql('COMPLETADO'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Validaciones estructurales adicionales RF-02",
+      "item": [
+        {
+          "name": "POST Cargar lote secuencial invalido",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_secuencial_invalido.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_secuencial_invalido.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo SECUENCIAL_INVALIDO', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('SECUENCIAL_INVALIDO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar lote sin cabecera",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_sin_cabecera.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_sin_cabecera.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo CABECERA_REQUERIDA', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('CABECERA_REQUERIDA'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar lote sin pie",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_sin_pie.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_sin_pie.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo PIE_REQUERIDO', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('PIE_REQUERIDO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar lote registro desconocido",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_registro_desconocido.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_registro_desconocido.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo REGISTRO_ARCHIVO_DESCONOCIDO', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('REGISTRO_ARCHIVO_DESCONOCIDO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar lote fecha invalida",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_fecha_invalida.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_fecha_invalida.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo FECHA_ARCHIVO_INVALIDA', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('FECHA_ARCHIVO_INVALIDA'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar lote monto invalido",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_monto_invalido.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_monto_invalido.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo MONTO_ARCHIVO_INVALIDO', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('MONTO_ARCHIVO_INVALIDO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar archivo formato no soportado",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_formato_no_soportado.pdf",
+                  "description": "Seleccione manualmente postman/examples/lote_formato_no_soportado.pdf si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 415', function () { pm.response.to.have.status(415); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo FORMATO_ARCHIVO_NO_SOPORTADO', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('FORMATO_ARCHIVO_NO_SOPORTADO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar lote RUC no coincide",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_valido.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_valido.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "1799999999001",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo RUC_EMPRESA_NO_COINCIDE', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('RUC_EMPRESA_NO_COINCIDE'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar lote tipo servicio no coincide",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_valido.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_valido.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicioPrv}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo TIPO_SERVICIO_NO_COINCIDE', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('TIPO_SERVICIO_NO_COINCIDE'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Cargar lote cuenta matriz no coincide",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_valido.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_valido.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "0010000000000000",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo CUENTA_MATRIZ_NO_COINCIDE', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('CUENTA_MATRIZ_NO_COINCIDE'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Estados intermedios y reportes invalidos",
+      "item": [
+        {
+          "name": "POST Cargar lote solo validado",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_valido - copia.csv",
+                  "description": "Seleccione manualmente postman/examples/lote_valido - copia.csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Guarda uuidLoteSoloValidado', function () { const json = pm.response.json(); pm.expect(json.uuidLote).to.exist; pm.collectionVariables.set('uuidLoteSoloValidado', json.uuidLote); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Validar lote solo validado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteSoloValidado}}/validar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteSoloValidado}}",
+                "validar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Lote validado', function () { const json = pm.response.json(); pm.expect(json.estado).to.eql('VALIDADO'); pm.expect(json.valido).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Liquidar lote no procesado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteSoloValidado}}/liquidar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteSoloValidado}}",
+                "liquidar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', function () { pm.response.to.have.status(409); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo LOTE_ESTADO_NO_LIQUIDABLE', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('LOTE_ESTADO_NO_LIQUIDABLE'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Novedades lote no cerrado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteSoloValidado}}/novedades?formato=JSON",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteSoloValidado}}",
+                "novedades"
+              ],
+              "query": [
+                {
+                  "key": "formato",
+                  "value": "JSON"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', function () { pm.response.to.have.status(409); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo LOTE_NO_CERRADO', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('LOTE_NO_CERRADO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Comprobante lote no cerrado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteSoloValidado}}/comprobante?formato=JSON",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteSoloValidado}}",
+                "comprobante"
+              ],
+              "query": [
+                {
+                  "key": "formato",
+                  "value": "JSON"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', function () { pm.response.to.have.status(409); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo LOTE_NO_CERRADO', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('LOTE_NO_CERRADO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Novedades formato invalido PDF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLote}}/novedades?formato=PDF",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLote}}",
+                "novedades"
+              ],
+              "query": [
+                {
+                  "key": "formato",
+                  "value": "PDF"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo FORMATO_REPORTE_INVALIDO', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('FORMATO_REPORTE_INVALIDO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Comprobante formato invalido XLSX",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLote}}/comprobante?formato=XLSX",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLote}}",
+                "comprobante"
+              ],
+              "query": [
+                {
+                  "key": "formato",
+                  "value": "XLSX"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo FORMATO_REPORTE_INVALIDO', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('FORMATO_REPORTE_INVALIDO'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Anulacion valida e invalida",
+      "item": [
+        {
+          "name": "POST Cargar lote para anular",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": "postman/examples/lote_valido - copia (2).csv",
+                  "description": "Seleccione manualmente postman/examples/lote_valido - copia (2).csv si Postman no conserva la ruta."
+                },
+                {
+                  "key": "tipoServicio",
+                  "value": "{{tipoServicio}}",
+                  "type": "text"
+                },
+                {
+                  "key": "cuentaMatrizCargo",
+                  "value": "{{cuentaMatrizCargo}}",
+                  "type": "text"
+                },
+                {
+                  "key": "canalIngreso",
+                  "value": "PORTAL_WEB",
+                  "type": "text"
+                },
+                {
+                  "key": "rucEmpresa",
+                  "value": "{{rucEmpresa}}",
+                  "type": "text"
+                },
+                {
+                  "key": "idCredencialWebCore",
+                  "value": "12345",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Guarda uuidLoteAnulacion', function () { const json = pm.response.json(); pm.expect(json.uuidLote).to.exist; pm.collectionVariables.set('uuidLoteAnulacion', json.uuidLote); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE Anular lote recibido",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Prueba desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteAnulacion}}",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteAnulacion}}"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Lote anulado', function () { const json = pm.response.json(); pm.expect(json.estado).to.eql('ANULADO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Validar lote anulado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLoteAnulacion}}/validar",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLoteAnulacion}}",
+                "validar"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', function () { pm.response.to.have.status(409); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo LOTE_ESTADO_NO_VALIDABLE', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('LOTE_ESTADO_NO_VALIDABLE'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE Anular lote cerrado",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Prueba desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{apiBase}}/lotes/{{uuidLote}}",
+              "host": [
+                "{{apiBase}}"
+              ],
+              "path": [
+                "lotes",
+                "{{uuidLote}}"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', function () { pm.response.to.have.status(409); });",
+                  "pm.test('Respuesta JSON valida', function () { pm.response.to.be.json; });",
+                  "pm.test('Codigo LOTE_NO_ANULABLE', function () { const json = pm.response.json(); pm.expect(json.codigo).to.eql('LOTE_NO_ANULABLE'); });"
                 ]
               }
             }

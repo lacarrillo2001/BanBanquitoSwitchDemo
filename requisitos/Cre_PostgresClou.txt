@@ -1,0 +1,32 @@
+Postgrest(Switch)
+
+Host name/address: 34.27.240.236
+Port: 5432
+Maintenance database: postgres
+Username: admin
+Password: banbanquito2
+Database: banquito_switch
+
+MariaDB(Core)
+
+Host: 34.27.240.236
+Port: 3306
+User: admin
+Password: banbanquito2
+Database: banquito_core
+
+servidor smtp
+
+Interfaz:
+
+http://34.27.240.236:8025/
+http://34.27.240.236:1025/
+
+
+API
+| Puerto | Función                 |
+| ------ | ----------------------- |
+| 1025   | SMTP (envío de correos) |
+| 8025   | Web UI + API HTTP       |
+
+

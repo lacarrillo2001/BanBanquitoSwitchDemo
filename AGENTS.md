@@ -140,7 +140,6 @@ Interfaces de servicios del módulo.
 
 ## 5. Reglas para entidades JPA
 
-- No usar Lombok.
 - No usar tipos primitivos como `int`, `long`, `double`, `boolean`, etc.
 - Usar wrappers como `Integer`, `Long`, `Boolean`.
 - Para dinero o valores monetarios usar siempre `BigDecimal`.
@@ -306,7 +305,6 @@ Los endpoints deben exponer casos de uso externos, no detalles internos de imple
 
 ## 13. Restricciones técnicas
 
-- No usar Lombok.
 - No usar mappers salvo instrucción explícita.
 - No crear microservicios.
 - No agregar colas externas.

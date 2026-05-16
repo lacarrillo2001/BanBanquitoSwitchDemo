@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BanQuito Switch Demo</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Banco BanQuito</p>
+        <h1>Consola de prueba del switch de pagos masivos</h1>
+        <p class="hero-copy">
+          Ejecuta el flujo completo del lote y revisa la respuesta cruda de cada paso para ubicar rapido cualquier falla.
+        </p>
+      </div>
+      <div class="hero-panel">
+        <label class="field">
+          <span>Base URL del backend</span>
+          <input id="baseUrl" type="url" value="http://localhost:8080" placeholder="http://localhost:8080">
+        </label>
+        <button id="pingButton" class="button secondary">Probar conexion</button>
+        <p id="connectionHint" class="hint">
+          Si el backend funciona en Postman pero falla aqui, probablemente es CORS del navegador.
+        </p>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="panel span-7">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Paso 1</p>
+            <h2>Configuracion y referencias</h2>
+          </div>
+          <div class="button-row compact">
+            <button id="loadHorariosButton" class="button secondary">Consultar horarios</button>
+            <button id="loadTarifasButton" class="button secondary">Consultar tarifas</button>
+          </div>
+        </div>
+
+        <div class="quick-grid">
+          <article class="mini-card">
+            <h3>Horarios</h3>
+            <div id="horariosSummary" class="summary-list empty-state">Aun sin consultar.</div>
+          </article>
+          <article class="mini-card">
+            <h3>Tarifas</h3>
+            <div id="tarifasSummary" class="summary-list empty-state">Aun sin consultar.</div>
+          </article>
+        </div>
+
+        <div class="example-strip">
+          <span class="example-chip" data-example="lote_valido.csv">lote_valido.csv</span>
+          <span class="example-chip" data-example="lote_descuadrado.csv">lote_descuadrado.csv</span>
+          <span class="example-chip" data-example="lote_error_cuenta_inexistente.csv">cuenta inexistente</span>
+          <span class="example-chip" data-example="lote_error_cuenta_bloqueada.csv">cuenta bloqueada</span>
+          <span class="example-chip" data-example="lote_monto_mayor_saldo.csv">saldo insuficiente</span>
+        </div>
+      </section>
+
+      <section class="panel span-5 accent-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Contexto</p>
+            <h2>Estado activo</h2>
+          </div>
+        </div>
+        <div id="activeState" class="status-stack">
+          <div class="status-card">
+            <span class="status-label">UUID lote</span>
+            <strong id="currentUuid">Sin lote activo</strong>
+          </div>
+          <div class="status-card">
+            <span class="status-label">Ultimo estado</span>
+            <strong id="currentEstado">Sin ejecucion</strong>
+          </div>
+          <div class="status-card">
+            <span class="status-label">Ultima accion</span>
+            <strong id="currentAction">Ninguna</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel span-7">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Paso 2</p>
+            <h2>Carga de lote</h2>
+          </div>
+        </div>
+
+        <form id="uploadForm" class="form-grid">
+          <label class="field field-file span-2">
+            <span>Archivo CSV/TXT</span>
+            <input id="archivo" name="archivo" type="file" accept=".csv,.txt" required>
+          </label>
+          <label class="field">
+            <span>Tipo servicio</span>
+            <input id="tipoServicio" name="tipoServicio" type="text" value="NOM" required>
+          </label>
+          <label class="field">
+            <span>Cuenta matriz</span>
+            <input id="cuentaMatrizCargo" name="cuentaMatrizCargo" type="text" value="0010001234567890" required>
+          </label>
+          <label class="field">
+            <span>Canal</span>
+            <select id="canalIngreso" name="canalIngreso">
+              <option value="PORTAL_WEB">PORTAL_WEB</option>
+              <option value="SFTP">SFTP</option>
+              <option value="API">API</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>RUC empresa</span>
+            <input id="rucEmpresa" name="rucEmpresa" type="text" value="1790012345001">
+          </label>
+          <label class="field">
+            <span>ID credencial Core</span>
+            <input id="idCredencialWebCore" name="idCredencialWebCore" type="number" value="12345">
+          </label>
+          <div class="button-row span-2">
+            <button type="submit" class="button primary">Cargar lote</button>
+            <button type="button" id="clearFileButton" class="button ghost">Limpiar archivo</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel span-5">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Paso 3</p>
+            <h2>Flujo del lote</h2>
+          </div>
+        </div>
+
+        <div class="field">
+          <span>UUID lote</span>
+          <input id="uuidLote" type="text" placeholder="Se llena al cargar o pega uno existente">
+        </div>
+
+        <div class="button-grid">
+          <button id="validarButton" class="button secondary">Validar lote</button>
+          <button id="estadoButton" class="button secondary">Consultar estado</button>
+          <button id="lineasButton" class="button secondary">Consultar lineas</button>
+          <button id="procesarButton" class="button secondary">Procesar lote</button>
+          <button id="liquidarButton" class="button secondary">Liquidar lote</button>
+        </div>
+
+        <div class="field top-gap">
+          <span>Observacion procesamiento</span>
+          <input id="observacionProcesamiento" type="text" value="Procesamiento desde demo-ui">
+        </div>
+      </section>
+
+      <section class="panel span-7">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Paso 4</p>
+            <h2>Resultados del proceso</h2>
+          </div>
+        </div>
+
+        <div class="result-panels">
+          <article class="mini-card">
+            <h3>Resumen del lote</h3>
+            <div id="estadoSummary" class="summary-list empty-state">Aun sin datos.</div>
+          </article>
+          <article class="mini-card">
+            <h3>Lineas</h3>
+            <div id="lineasSummary" class="summary-list empty-state">Aun sin datos.</div>
+          </article>
+        </div>
+
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Secuencial</th>
+                <th>Beneficiario</th>
+                <th>Cuenta destino</th>
+                <th>Monto</th>
+                <th>Estado</th>
+                <th>Error</th>
+              </tr>
+            </thead>
+            <tbody id="lineasTableBody">
+              <tr>
+                <td colspan="6" class="empty-table">No hay lineas cargadas.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel span-5">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Paso 5</p>
+            <h2>Reportes</h2>
+          </div>
+          <label class="field inline-field">
+            <span>Formato</span>
+            <select id="formatoReporte">
+              <option value="JSON">JSON</option>
+              <option value="CSV">CSV</option>
+              <option value="PDF">PDF</option>
+              <option value="XLSX">XLSX</option>
+            </select>
+          </label>
+        </div>
+        <div class="button-grid report-grid">
+          <button id="novedadesButton" class="button secondary">Ver novedades</button>
+          <button id="comprobanteButton" class="button secondary">Ver comprobante</button>
+        </div>
+        <div id="reportSummary" class="summary-list empty-state top-gap">Aun sin reportes.</div>
+      </section>
+
+      <section class="panel span-12 debug-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Diagnostico</p>
+            <h2>Ultima respuesta y rastro de ejecucion</h2>
+          </div>
+          <button id="clearHistoryButton" class="button ghost">Limpiar historial</button>
+        </div>
+
+        <div class="debug-grid">
+          <article class="debug-card">
+            <h3>Ultima respuesta</h3>
+            <div id="debugMeta" class="summary-list empty-state">Sin llamadas aun.</div>
+            <pre id="responseViewer">Esperando una accion...</pre>
+          </article>
+          <article class="debug-card">
+            <h3>Historial corto</h3>
+            <div id="historyList" class="history-list empty-state">No hay acciones registradas.</div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
