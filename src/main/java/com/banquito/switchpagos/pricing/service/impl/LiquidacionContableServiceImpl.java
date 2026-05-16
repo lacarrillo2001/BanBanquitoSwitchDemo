@@ -3,17 +3,17 @@ package com.banquito.switchpagos.pricing.service.impl;
 import com.banquito.switchpagos.audit.dto.internal.RegistroAuditoriaRequest;
 import com.banquito.switchpagos.audit.enums.TipoActorAuditoria;
 import com.banquito.switchpagos.audit.service.AuditoriaSwitchService;
+import com.banquito.switchpagos.integrationcore.config.CoreBancarioProperties;
+import com.banquito.switchpagos.integrationcore.dto.internal.LiquidacionCoreRequest;
+import com.banquito.switchpagos.integrationcore.dto.internal.LiquidacionCoreResponse;
 import com.banquito.switchpagos.shared.exception.ConflictoOperacionException;
 import com.banquito.switchpagos.shared.exception.EstadoInvalidoException;
 import com.banquito.switchpagos.shared.exception.IntegracionCoreException;
-import com.banquito.switchpagos.integrationcore.dto.internal.MovimientoCoreRequest;
-import com.banquito.switchpagos.integrationcore.dto.internal.MovimientoCoreResponse;
 import com.banquito.switchpagos.integrationcore.service.CoreBancarioService;
 import com.banquito.switchpagos.batch.dto.internal.LoteProcesamientoInternalDto;
 import com.banquito.switchpagos.batch.enums.EstadoLote;
 import com.banquito.switchpagos.batch.model.LotePago;
 import com.banquito.switchpagos.batch.service.LotePagoService;
-import com.banquito.switchpagos.pricing.constants.CuentaContableCore;
 import com.banquito.switchpagos.pricing.dto.api.LiquidarLoteResponse;
 import com.banquito.switchpagos.pricing.dto.internal.CalculoLiquidacionInternalDto;
 import com.banquito.switchpagos.pricing.dto.internal.LiquidacionComprobanteInternalDto;
@@ -50,6 +50,7 @@ public class LiquidacionContableServiceImpl implements LiquidacionContableServic
     private final TarifajeService tarifajeService;
     private final LotePagoService lotePagoService;
     private final CoreBancarioService coreBancarioService;
+    private final CoreBancarioProperties coreBancarioProperties;
     private final AuditoriaSwitchService auditoriaSwitchService;
     private final ObjectMapper objectMapper;
     private final EntityManager entityManager;
@@ -61,6 +62,7 @@ public class LiquidacionContableServiceImpl implements LiquidacionContableServic
                                           TarifajeService tarifajeService,
                                           LotePagoService lotePagoService,
                                           CoreBancarioService coreBancarioService,
+                                          CoreBancarioProperties coreBancarioProperties,
                                           AuditoriaSwitchService auditoriaSwitchService,
                                           ObjectMapper objectMapper,
                                           EntityManager entityManager,
@@ -71,6 +73,7 @@ public class LiquidacionContableServiceImpl implements LiquidacionContableServic
         this.tarifajeService = tarifajeService;
         this.lotePagoService = lotePagoService;
         this.coreBancarioService = coreBancarioService;
+        this.coreBancarioProperties = coreBancarioProperties;
         this.auditoriaSwitchService = auditoriaSwitchService;
         this.objectMapper = objectMapper;
         this.entityManager = entityManager;
@@ -169,59 +172,47 @@ public class LiquidacionContableServiceImpl implements LiquidacionContableServic
                                                                              CalculoLiquidacionInternalDto calculo) {
         List<MovimientoContableInternalDto> movimientos = new ArrayList<>();
         UUID uuidGrupoCore = UUID.randomUUID();
-        movimientos.add(ejecutarMovimiento(
-                ConceptoDetalleLiquidacion.DEBITO_CUENTA_MATRIZ,
-                loteProcesamiento.cuentaMatrizCargo(),
-                CuentaContableCore.INGRESOS_SERVICIOS_MASIVOS,
-                calculo.totalDebitado(),
+        LiquidacionCoreRequest liquidacionCoreRequest = new LiquidacionCoreRequest(
                 uuidGrupoCore,
-                Boolean.TRUE
-        ));
-        movimientos.add(ejecutarMovimiento(
-                ConceptoDetalleLiquidacion.CREDITO_INGRESOS,
                 loteProcesamiento.cuentaMatrizCargo(),
-                CuentaContableCore.INGRESOS_SERVICIOS_MASIVOS,
                 calculo.subtotalComision(),
-                uuidGrupoCore,
-                Boolean.TRUE
-        ));
-        movimientos.add(ejecutarMovimiento(
-                ConceptoDetalleLiquidacion.CREDITO_IVA,
-                loteProcesamiento.cuentaMatrizCargo(),
-                CuentaContableCore.PASIVOS_IVA_RETENIDO,
                 calculo.montoIva(),
-                uuidGrupoCore,
-                Boolean.TRUE
+                calculo.totalDebitado(),
+                Boolean.TRUE,
+                coreBancarioProperties.getIntegration().getCodigoCuentaIngresos(),
+                coreBancarioProperties.getIntegration().getCodigoCuentaIva(),
+                loteProcesamiento.uuidLote().toString()
+        );
+        LiquidacionCoreResponse liquidacionCoreResponse = coreBancarioService.liquidarServicio(liquidacionCoreRequest);
+        if (!Boolean.TRUE.equals(liquidacionCoreResponse.exitoso())) {
+            throw new IntegracionCoreException(liquidacionCoreResponse.codigo(), liquidacionCoreResponse.mensaje());
+        }
+
+        movimientos.add(new MovimientoContableInternalDto(
+                ConceptoDetalleLiquidacion.DEBITO_CUENTA_MATRIZ,
+                calculo.totalDebitado(),
+                liquidacionCoreResponse.uuidDebitoMatriz(),
+                loteProcesamiento.cuentaMatrizCargo(),
+                null,
+                EstadoDebitoLiquidacion.COMPLETADO.name()
+        ));
+        movimientos.add(new MovimientoContableInternalDto(
+                ConceptoDetalleLiquidacion.CREDITO_INGRESOS,
+                calculo.subtotalComision(),
+                liquidacionCoreResponse.uuidCreditoIngresos(),
+                loteProcesamiento.cuentaMatrizCargo(),
+                coreBancarioProperties.getIntegration().getNumeroCuentaIngresos(),
+                EstadoDebitoLiquidacion.COMPLETADO.name()
+        ));
+        movimientos.add(new MovimientoContableInternalDto(
+                ConceptoDetalleLiquidacion.CREDITO_IVA,
+                calculo.montoIva(),
+                liquidacionCoreResponse.uuidCreditoIva(),
+                loteProcesamiento.cuentaMatrizCargo(),
+                coreBancarioProperties.getIntegration().getNumeroCuentaIva(),
+                EstadoDebitoLiquidacion.COMPLETADO.name()
         ));
         return movimientos;
-    }
-
-    private MovimientoContableInternalDto ejecutarMovimiento(ConceptoDetalleLiquidacion concepto, String cuentaOrigen,
-                                                            String cuentaDestino, java.math.BigDecimal monto,
-                                                            UUID uuidGrupoCore, Boolean permiteSobregiro) {
-        MovimientoCoreRequest movimientoCoreRequest = new MovimientoCoreRequest(
-                cuentaOrigen,
-                cuentaDestino,
-                monto,
-                UUID.randomUUID(),
-                uuidGrupoCore,
-                concepto.name(),
-                permiteSobregiro
-        );
-        MovimientoCoreResponse movimientoCoreResponse = ConceptoDetalleLiquidacion.DEBITO_CUENTA_MATRIZ.equals(concepto)
-                ? coreBancarioService.ejecutarDebito(movimientoCoreRequest)
-                : coreBancarioService.ejecutarCredito(movimientoCoreRequest);
-        if (!Boolean.TRUE.equals(movimientoCoreResponse.exitoso())) {
-            throw new IntegracionCoreException(movimientoCoreResponse.codigo(), movimientoCoreResponse.mensaje());
-        }
-        return new MovimientoContableInternalDto(
-                concepto,
-                monto,
-                movimientoCoreResponse.uuidTransaccionCore(),
-                cuentaOrigen,
-                cuentaDestino,
-                EstadoDebitoLiquidacion.COMPLETADO.name()
-        );
     }
 
     private LiquidarLoteResponse construirLiquidarLoteResponse(UUID uuidLote, LiquidacionServicio liquidacionServicio,

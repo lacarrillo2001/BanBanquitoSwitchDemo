@@ -20,7 +20,7 @@ El backend está organizado como un monolito modular bajo el paquete base `com.b
 | `lote` | Administra el ciclo de vida del lote, estados, historial y cola interna persistida. |
 | `archivo` | Lee archivos `CSV/TXT`, calcula `hashArchivo`, parsea cabecera/detalle/pie y valida estructura. |
 | `procesamiento` | Administra líneas de pago, validación de límites y procesamiento financiero línea por línea. |
-| `integracioncore` | Simula la comunicación con el Core Bancario para saldo, cuentas y movimientos. |
+| `integracioncore` | Encapsula la comunicacion con el Core Bancario para empresa, calendario, cuentas, saldos y movimientos. |
 | `tarifaje` | Calcula tarifas, comisión, IVA y registra liquidación contable. |
 | `reporte` | Genera reporte de novedades, comprobante de liquidación y notificaciones a beneficiarios. |
 
@@ -62,7 +62,7 @@ T,ABC123HASH,3,1800.00
 | `VALIDANDO` | Lote en validación estructural. |
 | `VALIDADO` | Archivo estructuralmente correcto y listo para procesamiento financiero. |
 | `RECHAZADO` | Lote rechazado por error global de archivo o validación estructural. |
-| `ENCOLADO` | Lote recibido fuera de horario, fin de semana o fecha no hábil simulada. |
+| `ENCOLADO` | Lote recibido fuera de horario, fin de semana o fecha no habil segun calendario Core. |
 | `PROCESANDO` | Lote en procesamiento financiero línea por línea. |
 | `PROCESADO_PARCIAL` | Procesamiento terminado con al menos una línea rechazada/fallida, o sin éxito total. |
 | `PROCESADO_TOTAL` | Todas las líneas procesables fueron exitosas. |
@@ -91,8 +91,8 @@ Flujos alternos:
 |---|---|
 | `PENDIENTE` | Línea parseada y aún no procesada financieramente. |
 | `VALIDADA` | Línea pasó validaciones previas de procesamiento. |
-| `ENVIADA_CORE` | Línea enviada al Core Bancario simulado para débito/crédito. |
-| `EXITOSA` | Débito y crédito simulados se completaron correctamente. |
+| `ENVIADA_CORE` | Linea enviada al Core Bancario para debito/credito. |
+| `EXITOSA` | Debito y credito en Core se completaron correctamente. |
 | `RECHAZADA` | Falló por una regla de negocio esperada. |
 | `FALLIDA` | Falló por un error técnico o inesperado. |
 | `REVERSADA` | Estado reservado para reversos posteriores. |
@@ -108,14 +108,16 @@ Flujos alternos:
 | 3. Cargar lote | `POST /api/v1/pagos-masivos/lotes` | `lote` / `archivo` | No existe | `RECIBIDO` o `ENCOLADO` | Guarda `LOTE_PAGO`, `LINEA_PAGO`, historial y cola si aplica. |
 | 4. Validar lote | `POST /api/v1/pagos-masivos/lotes/{uuidLote}/validar` | `lote` | `RECIBIDO` o `ENCOLADO` | `VALIDADO` o `RECHAZADO` | Actualiza lote, totales, motivo de rechazo e historial. |
 | 5. Consultar líneas | `GET /api/v1/pagos-masivos/lotes/{uuidLote}/lineas` | `lote` / `procesamiento` | Cualquier estado existente | Sin cambio | Lee `LINEA_PAGO`. |
-| 6. Procesar lote | `POST /api/v1/pagos-masivos/lotes/{uuidLote}/procesar` | `procesamiento` | `VALIDADO` | `PROCESADO_TOTAL` o `PROCESADO_PARCIAL` | Actualiza líneas, UUIDs Core simulados, lote e historial. |
+| 6. Procesar lote | `POST /api/v1/pagos-masivos/lotes/{uuidLote}/procesar` | `procesamiento` | `VALIDADO` | `PROCESADO_TOTAL` o `PROCESADO_PARCIAL` | Actualiza lineas, UUIDs Core, lote e historial. |
 | 7. Liquidar comisión e IVA | `POST /api/v1/pagos-masivos/lotes/{uuidLote}/liquidar` | `tarifaje` | `PROCESADO_TOTAL` o `PROCESADO_PARCIAL` | `CERRADO` | Guarda `LIQUIDACION_SERVICIO` y `DETALLE_LIQUIDACION`. |
 | 8. Consultar novedades | `GET /api/v1/pagos-masivos/lotes/{uuidLote}/novedades` | `reporte` | `CERRADO` | Sin cambio | Guarda o lee `REPORTE_CIERRE`; crea notificaciones si faltan. |
 | 9. Consultar comprobante | `GET /api/v1/pagos-masivos/lotes/{uuidLote}/comprobante` | `reporte` | `CERRADO` | Sin cambio | Guarda o lee `REPORTE_CIERRE`. |
 
+Los lotes `ENCOLADO` se guardan en `COLA_PROCESAMIENTO`. El scheduler interno toma colas `PENDIENTE` o `REINTENTO` cuando `FECHA_PROGRAMADA_PROCESO <= now()`, valida el lote y lo procesa si queda `VALIDADO`. Para pruebas manuales existe `POST /api/v1/pagos-masivos/cola/procesar-pendientes`, que procesa pendientes sin esperar la hora programada.
+
 ## 7. Reglas de validación estructural
 
-La validación estructural no llama al Core Bancario.
+La validacion global consulta al Core Bancario para empresa emisora y cuenta matriz.
 
 - Cabecera: debe existir un registro `H` con RUC, tipo de servicio, fecha, cuenta matriz, total declarado y monto declarado.
 - Pie: debe existir un registro `T` con `hashPieControl`, total de registros y monto total.
@@ -131,12 +133,19 @@ La validación estructural no llama al Core Bancario.
 - Las líneas se procesan en orden de secuencial.
 - Solo se procesan líneas `PENDIENTE` o `VALIDADA`.
 - Se valida límite vigente activo por tipo de servicio.
-- Se consulta saldo disponible en el Core simulado.
-- Se valida cuenta destino en el Core simulado.
-- Se ejecutan débito y crédito simulados.
+- Se consulta saldo disponible en el Core.
+- Se valida cuenta destino en el Core.
+- Se ejecuta la transferencia real en Core y se registran UUIDs de debito/credito.
 - Una línea fallida no aborta el lote.
 
-Reglas del Core simulado:
+Reglas del Core en modo `rest`:
+
+- Empresa y cuenta matriz se validan al validar el lote.
+- Calendario operativo se consulta al cargar y encolar el lote.
+- Cuenta destino y saldo disponible se validan por linea.
+- Transferencia por linea y liquidacion de servicio afectan saldos reales en Core.
+
+Reglas del Core en modo `stub`:
 
 - Cuentas válidas por defecto.
 - Cuenta destino terminada en `0000` → `CUENTA_DESTINO_NO_EXISTE`.
@@ -183,7 +192,7 @@ Los formatos `PDF`, `CSV` y `XLSX` se registran como metadato, pero el contenido
 | `DELETE` | `/api/v1/pagos-masivos/lotes/{uuidLote}` | Anular lote. | `RECIBIDO`, `VALIDANDO`, `VALIDADO`, `ENCOLADO` o `RECHAZADO` | Estado `ANULADO`. |
 | `POST` | `/api/v1/pagos-masivos/lotes/{uuidLote}/validar` | Ejecutar validación estructural. | `RECIBIDO` o `ENCOLADO` | `VALIDADO` o `RECHAZADO`. |
 | `GET` | `/api/v1/pagos-masivos/lotes/{uuidLote}/lineas` | Consultar líneas del lote. | Lote existente | Página de líneas. |
-| `POST` | `/api/v1/pagos-masivos/lotes/{uuidLote}/procesar` | Procesar líneas contra Core simulado. | `VALIDADO` | `PROCESADO_TOTAL` o `PROCESADO_PARCIAL`. |
+| `POST` | `/api/v1/pagos-masivos/lotes/{uuidLote}/procesar` | Procesar lineas contra Core. | `VALIDADO` | `PROCESADO_TOTAL` o `PROCESADO_PARCIAL`. |
 | `POST` | `/api/v1/pagos-masivos/lotes/{uuidLote}/liquidar` | Calcular comisión, IVA y registrar movimientos. | `PROCESADO_TOTAL` o `PROCESADO_PARCIAL` | Liquidación `COMPLETADO`. |
 | `GET` | `/api/v1/pagos-masivos/tarifas` | Consultar tarifario vigente. | No aplica | Tarifas vigentes. |
 | `GET` | `/api/v1/pagos-masivos/horarios-corte` | Consultar horarios operativos. | No aplica | Hora de corte, inicio de encolados y ventana de duplicidad. |
@@ -205,7 +214,7 @@ Los formatos `PDF`, `CSV` y `XLSX` se registran como metadato, pero el contenido
 
 ## 13. Limitaciones actuales
 
-- Core Bancario simulado.
+- Core Bancario por REST en modo `rest`, o stub local en modo `stub`.
 - SMTP simulado.
 - No hay microservicios.
 - No hay colas externas.

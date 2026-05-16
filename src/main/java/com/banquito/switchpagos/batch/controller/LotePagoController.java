@@ -50,6 +50,8 @@ public class LotePagoController {
                                            @RequestParam("canalIngreso") CanalIngreso canalIngreso,
                                            @RequestParam(value = "idCredencialWebCore", required = false)
                                            Integer idCredencialWebCore,
+                                           @RequestParam(value = "usernameCredencialWebCore", required = false)
+                                           String usernameCredencialWebCore,
                                            @RequestParam(value = "rucEmpresa", required = false) String rucEmpresa) {
         RegistroLoteInternalDto registroLoteInternalDto = new RegistroLoteInternalDto(
                 archivo,
@@ -57,6 +59,7 @@ public class LotePagoController {
                 cuentaMatrizCargo,
                 canalIngreso,
                 idCredencialWebCore,
+                usernameCredencialWebCore,
                 rucEmpresa
         );
         return lotePagoService.registrarLote(registroLoteInternalDto);

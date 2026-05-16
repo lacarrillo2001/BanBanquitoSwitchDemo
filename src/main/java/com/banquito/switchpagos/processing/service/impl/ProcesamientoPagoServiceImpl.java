@@ -1,6 +1,7 @@
 package com.banquito.switchpagos.processing.service.impl;
 
 import com.banquito.switchpagos.shared.exception.EstadoInvalidoException;
+import com.banquito.switchpagos.shared.exception.IntegracionCoreException;
 import com.banquito.switchpagos.shared.exception.SwitchPagosException;
 import com.banquito.switchpagos.integrationcore.dto.internal.ConsultaSaldoCoreResponse;
 import com.banquito.switchpagos.integrationcore.dto.internal.MovimientoCoreRequest;
@@ -91,6 +92,12 @@ public class ProcesamientoPagoServiceImpl implements ProcesamientoPagoService {
             validarLinea(loteProcesamiento, lineaPago);
             enviarLineaAlCore(loteProcesamiento, lineaPago);
             registrarLineaExitosa(lineaPago);
+        } catch (IntegracionCoreException exception) {
+            if (esErrorTecnicoCore(exception)) {
+                registrarLineaFallida(lineaPago, exception.getCodigo(), exception.getMessage());
+            } else {
+                registrarLineaRechazada(lineaPago, exception.getCodigo(), exception.getMessage());
+            }
         } catch (SwitchPagosException exception) {
             registrarLineaRechazada(lineaPago, exception.getCodigo(), exception.getMessage());
         } catch (Exception exception) {
@@ -194,6 +201,9 @@ public class ProcesamientoPagoServiceImpl implements ProcesamientoPagoService {
     }
 
     private EstadoLote determinarEstadoFinal(ResultadoProcesamientoResponse resultado) {
+        if (resultado.exitosas() == null || resultado.exitosas() == 0) {
+            return EstadoLote.FALLIDO;
+        }
         if (resultado.totalLineas().equals(resultado.exitosas())) {
             return EstadoLote.PROCESADO_TOTAL;
         }
@@ -206,5 +216,9 @@ public class ProcesamientoPagoServiceImpl implements ProcesamientoPagoService {
             return "SISTEMA";
         }
         return procesarLoteRequest.ejecutadoPor();
+    }
+
+    private boolean esErrorTecnicoCore(IntegracionCoreException exception) {
+        return "CORE_NO_DISPONIBLE".equals(exception.getCodigo()) || "ERROR_CORE".equals(exception.getCodigo());
     }
 }

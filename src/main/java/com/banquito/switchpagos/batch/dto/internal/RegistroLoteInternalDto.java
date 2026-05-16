@@ -9,6 +9,7 @@ public record RegistroLoteInternalDto(
         String cuentaMatrizCargo,
         CanalIngreso canalIngreso,
         Integer idCredencialWebCore,
+        String usernameCredencialWebCore,
         String rucEmpresa
 ) {
 }

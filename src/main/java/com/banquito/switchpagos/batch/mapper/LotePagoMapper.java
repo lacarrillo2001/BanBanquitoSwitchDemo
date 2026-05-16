@@ -39,7 +39,7 @@ public class LotePagoMapper {
         lotePago.setRucEmpresa(archivoPagoParseado.cabecera().rucEmpresa());
         lotePago.setIdCredencialWebCore(registroLoteInternalDto.idCredencialWebCore());
         lotePago.setTipoServicio(tipoServicio);
-        lotePago.setCuentaMatrizCargo(archivoPagoParseado.cabecera().cuentaMatrizCargo());
+        lotePago.setCuentaMatrizCargo(registroLoteInternalDto.cuentaMatrizCargo());
         lotePago.setFechaHoraGeneracion(archivoPagoParseado.cabecera().fechaHoraGeneracion());
         lotePago.setTotalRegistrosDeclarado(archivoPagoParseado.cabecera().totalRegistrosDeclarado());
         lotePago.setMontoTotalDeclarado(archivoPagoParseado.cabecera().montoTotalDeclarado());

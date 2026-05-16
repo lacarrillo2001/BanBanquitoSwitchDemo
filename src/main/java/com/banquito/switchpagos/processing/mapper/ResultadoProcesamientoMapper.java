@@ -2,6 +2,7 @@ package com.banquito.switchpagos.processing.mapper;
 
 import com.banquito.switchpagos.processing.dto.api.ProcesarLoteResponse;
 import com.banquito.switchpagos.processing.dto.api.ResultadoProcesamientoResponse;
+import com.banquito.switchpagos.batch.enums.EstadoLote;
 import com.banquito.switchpagos.processing.enums.EstadoLineaPago;
 import com.banquito.switchpagos.processing.repository.LineaPagoRepository;
 import org.springframework.stereotype.Component;
@@ -23,6 +24,7 @@ public class ResultadoProcesamientoMapper {
 
     public ProcesarLoteResponse toProcesarLoteResponse(UUID uuidLote, String estado,
                                                        ResultadoProcesamientoResponse resultado) {
-        return new ProcesarLoteResponse(uuidLote, estado, resultado, "LIQUIDAR");
+        String siguienteAccion = EstadoLote.FALLIDO.name().equals(estado) ? null : "LIQUIDAR";
+        return new ProcesarLoteResponse(uuidLote, estado, resultado, siguienteAccion);
     }
 }

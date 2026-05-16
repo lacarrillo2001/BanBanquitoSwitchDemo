@@ -1,7 +1,7 @@
-H,1790012345001,NOM,2026-04-20T10:30:00-05:00,0010001234567890,5,212250.00
-D,1,0912345678,Juan Perez,0020009876543210,1000.00,Sueldo Abril,juan.perez@correo.com
-D,2,0922222222,Maria Lopez,0020009876540000,500.00,Sueldo Abril,maria.lopez@correo.com
-D,3,0933333333,Carlos Ruiz,0020009876549999,750.00,Sueldo Abril,carlos.ruiz@correo.com
-D,4,0944444444,Ana Torres,0020009876543240,150000.00,Sueldo Abril,ana.torres@correo.com
-D,5,0955555555,Diego Mora,0020009876543250,60000.00,Sueldo Abril,diego.mora@correo.com
+H,1790000001001,NOM,2026-04-20T10:30:00-05:00,0010000000601,5,212250.00
+D,1,1700000002,Juan Perez,0010000000002,1000.00,Sueldo Abril,juan.perez@correo.com
+D,2,1700000003,Maria Lopez,0019999999999,500.00,Sueldo Abril,maria.lopez@correo.com
+D,3,1700000004,Carlos Ruiz,0010000000010,750.00,Sueldo Abril,carlos.ruiz@correo.com
+D,4,1700000008,Ana Torres,0010000000008,150000.00,Sueldo Abril,ana.torres@correo.com
+D,5,1700000009,Diego Mora,0010000000009,60000.00,Sueldo Abril,diego.mora@correo.com
 T,MIXTO001,5,212250.00

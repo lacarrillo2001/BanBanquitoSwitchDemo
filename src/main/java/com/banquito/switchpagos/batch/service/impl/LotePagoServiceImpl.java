@@ -27,6 +27,7 @@ import com.banquito.switchpagos.batch.dto.api.TotalesValidacionResponse;
 import com.banquito.switchpagos.batch.dto.api.ValidacionLoteResponse;
 import com.banquito.switchpagos.batch.dto.internal.LoteProcesamientoInternalDto;
 import com.banquito.switchpagos.batch.dto.internal.RegistroLoteInternalDto;
+import com.banquito.switchpagos.batch.enums.CanalIngreso;
 import com.banquito.switchpagos.batch.enums.EstadoLote;
 import com.banquito.switchpagos.batch.enums.FormatoArchivo;
 import com.banquito.switchpagos.batch.model.HistorialEstadoLote;
@@ -38,6 +39,10 @@ import com.banquito.switchpagos.batch.repository.ColaProcesamientoRepository;
 import com.banquito.switchpagos.batch.repository.HistorialEstadoLoteRepository;
 import com.banquito.switchpagos.batch.repository.LotePagoRepository;
 import com.banquito.switchpagos.batch.service.LotePagoService;
+import com.banquito.switchpagos.integrationcore.dto.internal.DiaHabilCoreResponse;
+import com.banquito.switchpagos.integrationcore.dto.internal.CuentaFavoritaPagosCoreResponse;
+import com.banquito.switchpagos.integrationcore.dto.internal.ValidacionCoreResponse;
+import com.banquito.switchpagos.integrationcore.service.CoreBancarioService;
 import com.banquito.switchpagos.parameter.constants.CodigoParametroSwitch;
 import com.banquito.switchpagos.parameter.service.ParametroSwitchService;
 import com.banquito.switchpagos.processing.enums.EstadoLineaPago;
@@ -53,7 +58,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -75,6 +79,7 @@ public class LotePagoServiceImpl implements LotePagoService {
     private final ParametroSwitchService parametroSwitchService;
     private final TipoServicioService tipoServicioService;
     private final LineaPagoService lineaPagoService;
+    private final CoreBancarioService coreBancarioService;
     private final AuditoriaSwitchService auditoriaSwitchService;
     private final ObjectMapper objectMapper;
     private final LotePagoMapper lotePagoMapper;
@@ -90,6 +95,7 @@ public class LotePagoServiceImpl implements LotePagoService {
                                ParametroSwitchService parametroSwitchService,
                                TipoServicioService tipoServicioService,
                                LineaPagoService lineaPagoService,
+                               CoreBancarioService coreBancarioService,
                                AuditoriaSwitchService auditoriaSwitchService,
                                ObjectMapper objectMapper,
                                LotePagoMapper lotePagoMapper,
@@ -104,6 +110,7 @@ public class LotePagoServiceImpl implements LotePagoService {
         this.parametroSwitchService = parametroSwitchService;
         this.tipoServicioService = tipoServicioService;
         this.lineaPagoService = lineaPagoService;
+        this.coreBancarioService = coreBancarioService;
         this.auditoriaSwitchService = auditoriaSwitchService;
         this.objectMapper = objectMapper;
         this.lotePagoMapper = lotePagoMapper;
@@ -121,13 +128,18 @@ public class LotePagoServiceImpl implements LotePagoService {
             ErrorValidacionArchivoInternalDto primerError = resultadoValidacion.errores().getFirst();
             throw new SolicitudInvalidaException(primerError.codigo(), primerError.mensaje());
         }
-        validarDatosSolicitud(registroLoteInternalDto, archivoPagoParseado);
+        RegistroLoteInternalDto registroNormalizado = resolverCuentaMatrizSegunCanal(
+                registroLoteInternalDto,
+                archivoPagoParseado
+        );
+        validarDatosSolicitud(registroNormalizado, archivoPagoParseado);
+        validarCredencialSolicitud(registroNormalizado, archivoPagoParseado);
         validarDuplicidad(archivoPagoParseado.cabecera().rucEmpresa(), archivoPagoParseado.nombreArchivo(),
                 archivoPagoParseado.hashArchivo());
 
         OffsetDateTime fechaRecepcion = OffsetDateTime.now(ZONA_HORARIA_OPERATIVA);
         EstadoLote estadoInicial = calcularEstadoInicial(fechaRecepcion);
-        LotePago lotePago = construirLotePago(registroLoteInternalDto, archivoPagoParseado, estadoInicial, fechaRecepcion);
+        LotePago lotePago = construirLotePago(registroNormalizado, archivoPagoParseado, estadoInicial, fechaRecepcion);
         lotePagoRepository.save(lotePago);
         lineaPagoService.guardarLineasPendientes(lotePago, archivoPagoParseado.detalles());
         registrarHistorialEstado(lotePago, null, estadoInicial, "Registro inicial del lote.", "SISTEMA");
@@ -280,7 +292,8 @@ public class LotePagoServiceImpl implements LotePagoService {
                     "El tipo de servicio enviado no coincide con la cabecera del archivo."
             );
         }
-        if (!archivoPagoParseado.cabecera().cuentaMatrizCargo().equals(registroLoteInternalDto.cuentaMatrizCargo())) {
+        if (!CanalIngreso.SFTP.equals(registroLoteInternalDto.canalIngreso())
+                && !archivoPagoParseado.cabecera().cuentaMatrizCargo().equals(registroLoteInternalDto.cuentaMatrizCargo())) {
             throw new SolicitudInvalidaException(
                     "CUENTA_MATRIZ_NO_COINCIDE",
                     "La cuenta matriz enviada no coincide con la cabecera del archivo."
@@ -294,6 +307,34 @@ public class LotePagoServiceImpl implements LotePagoService {
                     "El RUC enviado no coincide con la cabecera del archivo."
             );
         }
+    }
+
+    private RegistroLoteInternalDto resolverCuentaMatrizSegunCanal(RegistroLoteInternalDto registroLoteInternalDto,
+                                                                   ArchivoPagoParseadoInternalDto archivoPagoParseado) {
+        if (!CanalIngreso.SFTP.equals(registroLoteInternalDto.canalIngreso())) {
+            return registroLoteInternalDto;
+        }
+
+        CuentaFavoritaPagosCoreResponse cuentaFavorita = coreBancarioService.obtenerCuentaFavoritaPagos(
+                archivoPagoParseado.cabecera().rucEmpresa()
+        );
+        if (!Boolean.TRUE.equals(cuentaFavorita.valida()) || cuentaFavorita.numeroCuenta() == null
+                || cuentaFavorita.numeroCuenta().isBlank()) {
+            throw new ReglaNegocioException(
+                    codigoError(cuentaFavorita.codigo(), "CUENTA_FAVORITA_INVALIDA"),
+                    mensajeError(cuentaFavorita.mensaje(), "La empresa no tiene una cuenta favorita valida para pagos masivos.")
+            );
+        }
+
+        return new RegistroLoteInternalDto(
+                registroLoteInternalDto.archivo(),
+                registroLoteInternalDto.tipoServicio(),
+                cuentaFavorita.numeroCuenta(),
+                registroLoteInternalDto.canalIngreso(),
+                registroLoteInternalDto.idCredencialWebCore(),
+                registroLoteInternalDto.usernameCredencialWebCore(),
+                registroLoteInternalDto.rucEmpresa()
+        );
     }
 
     private Specification<LotePago> construirFiltrosConsulta(String rucEmpresa,
@@ -357,14 +398,11 @@ public class LotePagoServiceImpl implements LotePagoService {
     private EstadoLote calcularEstadoInicial(OffsetDateTime fechaRecepcion) {
         LocalTime horaCorte = parametroSwitchService.obtenerHora(CodigoParametroSwitch.HORA_CORTE_PROCESO);
         LocalDate fechaLocal = fechaRecepcion.toLocalDate();
-        if (esDiaHabil(fechaLocal) && fechaRecepcion.toLocalTime().isBefore(horaCorte)) {
+        DiaHabilCoreResponse diaHabil = coreBancarioService.consultarDiaHabil(fechaLocal);
+        if (Boolean.TRUE.equals(diaHabil.esDiaHabil()) && fechaRecepcion.toLocalTime().isBefore(horaCorte)) {
             return EstadoLote.RECIBIDO;
         }
         return EstadoLote.ENCOLADO;
-    }
-
-    private Boolean esDiaHabil(LocalDate fecha) {
-        return !DayOfWeek.SATURDAY.equals(fecha.getDayOfWeek()) && !DayOfWeek.SUNDAY.equals(fecha.getDayOfWeek());
     }
 
     private void registrarColaProcesamiento(LotePago lotePago, OffsetDateTime fechaRecepcion) {
@@ -380,15 +418,13 @@ public class LotePagoServiceImpl implements LotePagoService {
     }
 
     private LocalDate obtenerSiguienteDiaHabil(LocalDate fechaBase) {
-        LocalDate fechaProgramada = fechaBase.plusDays(1);
-        while (!esDiaHabil(fechaProgramada)) {
-            fechaProgramada = fechaProgramada.plusDays(1);
-        }
-        return fechaProgramada;
+        DiaHabilCoreResponse diaHabil = coreBancarioService.consultarDiaHabil(fechaBase);
+        return diaHabil.siguienteDiaHabil();
     }
 
     private List<ErrorGlobalResponse> validarReglasLote(LotePago lotePago) {
         List<ErrorGlobalResponse> errores = new ArrayList<>();
+        validarReglasCore(lotePago, errores);
         if (!tipoServicioService.existeActivo(lotePago.getTipoServicio().getCodigo())) {
             errores.add(new ErrorGlobalResponse("TIPO_SERVICIO_INACTIVO", "El tipo de servicio no existe o no esta activo."));
         }
@@ -419,6 +455,98 @@ public class LotePagoServiceImpl implements LotePagoService {
             errores.add(new ErrorGlobalResponse("MONTO_PIE_INVALIDO", "El monto del pie no coincide con las lineas parseadas."));
         }
         return errores;
+    }
+
+    private void validarReglasCore(LotePago lotePago, List<ErrorGlobalResponse> errores) {
+        ValidacionCoreResponse validacionEmpresa = coreBancarioService.validarEmpresa(lotePago.getRucEmpresa());
+        if (!Boolean.TRUE.equals(validacionEmpresa.valida())) {
+            errores.add(new ErrorGlobalResponse(
+                    codigoError(validacionEmpresa, "EMPRESA_NO_HABILITADA"),
+                    mensajeError(validacionEmpresa, "La empresa emisora no esta habilitada en Core para pagos masivos.")
+            ));
+            return;
+        }
+
+        if (CanalIngreso.SFTP.equals(lotePago.getCanalIngreso())) {
+            validarCuentaFavoritaSftp(lotePago, errores);
+            return;
+        }
+
+        ValidacionCoreResponse validacionCuentaMatriz = coreBancarioService.validarCuentaMatriz(
+                lotePago.getRucEmpresa(),
+                lotePago.getCuentaMatrizCargo()
+        );
+        if (!Boolean.TRUE.equals(validacionCuentaMatriz.valida())) {
+            errores.add(new ErrorGlobalResponse(
+                    codigoError(validacionCuentaMatriz, "CUENTA_MATRIZ_INVALIDA"),
+                    mensajeError(validacionCuentaMatriz, "La cuenta matriz no es valida para pagos masivos.")
+            ));
+        }
+    }
+
+    private void validarCuentaFavoritaSftp(LotePago lotePago, List<ErrorGlobalResponse> errores) {
+        CuentaFavoritaPagosCoreResponse cuentaFavorita = coreBancarioService.obtenerCuentaFavoritaPagos(
+                lotePago.getRucEmpresa()
+        );
+        if (!Boolean.TRUE.equals(cuentaFavorita.valida())) {
+            errores.add(new ErrorGlobalResponse(
+                    codigoError(cuentaFavorita.codigo(), "CUENTA_FAVORITA_INVALIDA"),
+                    mensajeError(cuentaFavorita.mensaje(), "La cuenta favorita de pagos masivos no es valida.")
+            ));
+            return;
+        }
+        if (!lotePago.getCuentaMatrizCargo().equals(cuentaFavorita.numeroCuenta())) {
+            errores.add(new ErrorGlobalResponse(
+                    "CUENTA_FAVORITA_NO_COINCIDE",
+                    "La cuenta matriz del lote SFTP no coincide con la cuenta favorita vigente en Core."
+            ));
+        }
+    }
+
+    private void validarCredencialSolicitud(RegistroLoteInternalDto registroLoteInternalDto,
+                                            ArchivoPagoParseadoInternalDto archivoPagoParseado) {
+        if (registroLoteInternalDto.usernameCredencialWebCore() == null
+                || registroLoteInternalDto.usernameCredencialWebCore().isBlank()) {
+            return;
+        }
+        ValidacionCoreResponse validacionCredencial = coreBancarioService.validarCredencialEmpresa(
+                archivoPagoParseado.cabecera().rucEmpresa(),
+                registroLoteInternalDto.usernameCredencialWebCore()
+        );
+        if (!Boolean.TRUE.equals(validacionCredencial.valida())) {
+            throw new ReglaNegocioException(
+                    codigoError(validacionCredencial, "CREDENCIAL_EMPRESARIAL_INVALIDA"),
+                    mensajeError(validacionCredencial, "La credencial empresarial no es valida para pagos masivos.")
+            );
+        }
+    }
+
+    private String codigoError(ValidacionCoreResponse validacionCoreResponse, String codigoDefault) {
+        if (validacionCoreResponse.codigo() == null || validacionCoreResponse.codigo().isBlank()) {
+            return codigoDefault;
+        }
+        return validacionCoreResponse.codigo();
+    }
+
+    private String codigoError(String codigo, String codigoDefault) {
+        if (codigo == null || codigo.isBlank()) {
+            return codigoDefault;
+        }
+        return codigo;
+    }
+
+    private String mensajeError(ValidacionCoreResponse validacionCoreResponse, String mensajeDefault) {
+        if (validacionCoreResponse.mensaje() == null || validacionCoreResponse.mensaje().isBlank()) {
+            return mensajeDefault;
+        }
+        return validacionCoreResponse.mensaje();
+    }
+
+    private String mensajeError(String mensaje, String mensajeDefault) {
+        if (mensaje == null || mensaje.isBlank()) {
+            return mensajeDefault;
+        }
+        return mensaje;
     }
 
     private TotalesValidacionResponse construirTotalesValidacion(LotePago lotePago) {
